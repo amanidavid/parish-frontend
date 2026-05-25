@@ -93,6 +93,11 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
   const [customers, setCustomers] = useState([]);
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const customerSearchTimer = useRef(null);
+  const customerInputRef = useRef(null);
+  const customerDropdownRef = useRef(null);
   const [units, setUnits] = useState([]);
   const [unitsLoading, setUnitsLoading] = useState(false);
 
@@ -111,23 +116,18 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
         status: initial.status || 'draft',
         notes: initial.notes || '',
       });
+      setSelectedCustomerName(initial.customer?.display_name || '');
       setCustomerSearch(initial.customer?.display_name || '');
     } else {
       setForm(emptyForm);
+      setSelectedCustomerName('');
       setCustomerSearch('');
     }
+    setCustomers([]);
+    setCustomerDropdownOpen(false);
     setErrors({});
     setServerError(null);
   }, [open, isEdit, initial]);
-
-  useEffect(() => {
-    if (!open) return;
-    setCustomersLoading(true);
-    CustomerService.list({ displayName: customerSearch || undefined, perPage: 50 })
-      .then((data) => { if (data?.success) setCustomers(data.data || []); })
-      .catch(() => { })
-      .finally(() => setCustomersLoading(false));
-  }, [open, customerSearch]);
 
   useEffect(() => {
     if (!open) return;
@@ -137,6 +137,60 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
       .catch(() => { })
       .finally(() => setUnitsLoading(false));
   }, [open, propertyUuid]);
+
+  const fetchCustomers = useCallback((query) => {
+    setCustomersLoading(true);
+    CustomerService.list({ search: query || undefined, perPage: 20 })
+      .then((data) => {
+        if (data?.success) setCustomers(data.data || []);
+      })
+      .catch(() => { })
+      .finally(() => setCustomersLoading(false));
+  }, []);
+
+  const handleCustomerInputChange = (e) => {
+    const val = e.target.value;
+    setCustomerSearch(val);
+    setCustomerDropdownOpen(true);
+    if (customerSearchTimer.current) clearTimeout(customerSearchTimer.current);
+    customerSearchTimer.current = setTimeout(() => {
+      fetchCustomers(val.trim());
+    }, 300);
+  };
+
+  const handleCustomerFocus = () => {
+    setCustomerDropdownOpen(true);
+    if (customers.length === 0 && !customersLoading) {
+      fetchCustomers(customerSearch.trim());
+    }
+  };
+
+  const selectCustomer = (customer) => {
+    setForm((p) => ({ ...p, customer_uuid: customer.uuid }));
+    setSelectedCustomerName(customer.display_name);
+    setCustomerSearch(customer.display_name);
+    setCustomerDropdownOpen(false);
+    setErrors((p) => ({ ...p, customer_uuid: null }));
+  };
+
+  const clearCustomer = () => {
+    setForm((p) => ({ ...p, customer_uuid: '' }));
+    setSelectedCustomerName('');
+    setCustomerSearch('');
+    setCustomers([]);
+    setCustomerDropdownOpen(false);
+  };
+
+  useEffect(() => {
+    if (!customerDropdownOpen) return;
+    const handleClickOutside = (e) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(e.target)) {
+        setCustomerDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [customerDropdownOpen]);
 
   const change = (e) => {
     const { name, value } = e.target;
@@ -192,30 +246,65 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Customer */}
-          <div className="sm:col-span-2">
+          {/* Customer — searchable dropdown */}
+          <div className="sm:col-span-2 relative" ref={customerDropdownRef}>
             <label className="label">Customer <span className="text-red-500">*</span></label>
-            <div className="flex gap-2">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
               <input
+                ref={customerInputRef}
                 type="text"
-                className="input flex-1 text-sm"
-                placeholder="Search customer name..."
+                className="input pl-9 pr-8 text-sm w-full"
+                placeholder="Search and select a customer..."
                 value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
+                onChange={handleCustomerInputChange}
+                onFocus={handleCustomerFocus}
+                autoComplete="off"
               />
+              {form.customer_uuid && (
+                <button
+                  type="button"
+                  onClick={clearCustomer}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              {customerDropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {customersLoading ? (
+                    <div className="px-3 py-2 text-sm text-gray-400 flex items-center gap-2">
+                      <Spinner /> Searching...
+                    </div>
+                  ) : customers.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-gray-400">
+                      {customerSearch.trim() ? 'No customers found.' : 'Type to search customers...'}
+                    </div>
+                  ) : (
+                    customers.map((c) => (
+                      <button
+                        key={c.uuid}
+                        type="button"
+                        onClick={() => selectCustomer(c)}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${form.customer_uuid === c.uuid ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                          }`}
+                      >
+                        <span className="font-medium">{c.display_name}</span>
+                        {c.customer_type && (
+                          <span className="ml-2 text-xs text-gray-400 capitalize">{c.customer_type}</span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-            <select
-              name="customer_uuid"
-              className="input mt-1.5 text-sm"
-              value={form.customer_uuid}
-              onChange={change}
-              required
-            >
-              <option value="">{customersLoading ? 'Loading customers...' : 'Select customer'}</option>
-              {customers.map((c) => (
-                <option key={c.uuid} value={c.uuid}>{c.display_name}</option>
-              ))}
-            </select>
             <FieldError message={errors?.customer_uuid?.[0]} />
           </div>
 

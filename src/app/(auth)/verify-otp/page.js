@@ -17,7 +17,9 @@ function VerifyOtpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const challengeId = searchParams.get('cid') || '';
+  const fromRegister = searchParams.get('from') === 'register';
   const setAuth = useAuthStore((s) => s.setAuth);
+  const setNewUser = useAuthStore((s) => s.setNewUser);
 
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
@@ -73,6 +75,7 @@ function VerifyOtpForm() {
       const { access_token, user, tenants } = data?.data || {};
       const activeTenant = (tenants || []).find((t) => t.provisioning_status === 'completed') || tenants?.[0];
       setAuth(user, access_token, activeTenant?.tenant_uuid || null);
+      if (fromRegister) setNewUser(true);
       router.push('/dashboard');
     } catch {
       setError('Network error');

@@ -1,7 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import CountryCodePicker from '@/components/ui/CountryCodePicker';
+import { DEFAULT_COUNTRY } from '@/constants/countryCodes';
 
 function Spinner() {
   return (
@@ -12,12 +14,13 @@ function Spinner() {
   );
 }
 
-function Field({ label, id, error, children }) {
+function Field({ label, id, error, hint, children }) {
   return (
     <div>
       <label className="label" htmlFor={id}>{label}</label>
       {children}
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {!error && hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
     </div>
   );
 }
@@ -25,65 +28,75 @@ function Field({ label, id, error, children }) {
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({
-    name: '', username: '', phone: '', email: '',
-    password: '', password_confirmation: '',
+    name: '', phone: '', email: '', password: '',
   });
+  const [country, setCountry] = useState(DEFAULT_COUNTRY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [success, setSuccess] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    setFieldErrors((prev) => ({ ...prev, [e.target.name]: null }));
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => ({ ...prev, [name]: null }));
     setError(null);
-  };
+  }, []);
+
+  const handleCountryChange = useCallback((c) => {
+    setCountry(c);
+    setFieldErrors((prev) => ({ ...prev, phone: null }));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (form.password !== form.password_confirmation) {
-      setFieldErrors({ password_confirmation: ['Passwords do not match'] });
-      return;
-    }
     setLoading(true);
     setError(null);
     setFieldErrors({});
+
     try {
-      const res = await fetch('/api/auth/register', {
+      const regRes = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          country_code: country.dialCode,
+          email: form.email || undefined,
+          password: form.password,
+        }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data?.errors) setFieldErrors(data.errors);
-        setError(data?.message);
+      const regData = await regRes.json();
+
+      if (!regRes.ok) {
+        if (regData?.errors) setFieldErrors(regData.errors);
+        setError(regData?.message);
         return;
       }
-      setSuccess(data?.message);
-      setTimeout(() => router.push('/login'), 2500);
+
+      const loginRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: form.phone,
+          country_code: country.dialCode,
+          password: form.password,
+        }),
+      });
+      const loginData = await loginRes.json();
+      const challengeId = loginData?.data?.challenge_id;
+
+      if (challengeId) {
+        router.push(`/verify-otp?cid=${challengeId}&from=register`);
+      } else {
+        router.push('/login');
+      }
     } catch {
-      setError('Network error');
+      setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <div className="text-center py-8">
-        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Account Created!</h3>
-        <p className="text-gray-500 text-sm mb-1">{success}</p>
-        <p className="text-gray-400 text-xs">Redirecting to login...</p>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -102,26 +115,28 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Full Name" id="name" error={fieldErrors?.name?.[0]}>
-            <input id="name" name="name" type="text" className="input"
-              placeholder="John Doe" value={form.name} onChange={handleChange} required />
-          </Field>
-          <Field label="Username" id="username" error={fieldErrors?.username?.[0]}>
-            <input id="username" name="username" type="text" className="input"
-              placeholder="johndoe" value={form.username} onChange={handleChange} required />
-          </Field>
-        </div>
+        <Field label="Full Name" id="name" error={fieldErrors?.name?.[0]}>
+          <input id="name" name="name" type="text" className="input"
+            placeholder="John Doe" value={form.name} onChange={handleChange} required />
+        </Field>
 
-        <Field label="Phone Number" id="phone" error={fieldErrors?.phone?.[0]}>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-            </span>
-            <input id="phone" name="phone" type="tel" className="input pl-10"
-              placeholder="+255 700 000 000" value={form.phone} onChange={handleChange} required />
+        <Field label="Phone Number" id="phone" error={fieldErrors?.phone?.[0]} hint="Enter digits after country code, e.g. 712 345 678">
+          <div className="flex">
+            <CountryCodePicker
+              value={country.iso2}
+              onChange={handleCountryChange}
+              disabled={loading}
+            />
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              className="input rounded-l-none border-l-0 flex-1"
+              placeholder="712 345 678"
+              value={form.phone}
+              onChange={handleChange}
+              required
+            />
           </div>
         </Field>
 
@@ -157,18 +172,11 @@ export default function RegisterPage() {
           </div>
         </Field>
 
-        <Field label="Confirm Password" id="password_confirmation" error={fieldErrors?.password_confirmation?.[0]}>
-          <input id="password_confirmation" name="password_confirmation"
-            type={showPassword ? 'text' : 'password'} className="input"
-            placeholder="Repeat password"
-            value={form.password_confirmation} onChange={handleChange} required minLength={8} />
-        </Field>
-
         <button type="submit"
           className="w-full flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold text-white transition-all mt-2"
           style={{ background: loading ? '#93c5fd' : 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
           disabled={loading}>
-          {loading ? <><Spinner /> Creating account...</> : 'Create account'}
+          {loading ? <><Spinner /> Setting up account...</> : 'Create account'}
         </button>
 
         <p className="text-center text-sm text-gray-500">

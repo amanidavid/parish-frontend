@@ -1,7 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import CountryCodePicker from '@/components/ui/CountryCodePicker';
+import { DEFAULT_COUNTRY } from '@/constants/countryCodes';
 
 function Spinner() {
   return (
@@ -15,16 +17,22 @@ function Spinner() {
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ phone: '', password: '' });
+  const [country, setCountry] = useState(DEFAULT_COUNTRY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setFieldErrors((prev) => ({ ...prev, [e.target.name]: null }));
     setError(null);
-  };
+  }, []);
+
+  const handleCountryChange = useCallback((c) => {
+    setCountry(c);
+    setFieldErrors((prev) => ({ ...prev, phone: null }));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,7 +43,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ phone: form.phone, country_code: country.dialCode, password: form.password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -75,14 +83,16 @@ export default function LoginPage() {
 
         <div>
           <label className="label" htmlFor="phone">Phone Number</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-            </span>
-            <input id="phone" name="phone" type="tel" className="input pl-10"
-              placeholder="+255 700 000 000" value={form.phone} onChange={handleChange} required />
+          <div className="flex">
+            <CountryCodePicker value={country.iso2} onChange={handleCountryChange} disabled={loading} />
+            <input
+              id="phone" name="phone" type="tel"
+              className="input rounded-l-none border-l-0 flex-1"
+              placeholder="712 345 678"
+              value={form.phone}
+              onChange={handleChange}
+              required
+            />
           </div>
           {fieldErrors?.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors.phone[0]}</p>}
         </div>

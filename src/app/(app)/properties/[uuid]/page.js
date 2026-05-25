@@ -1,13 +1,15 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import PropertyService from '@/services/PropertyService';
 import StatusBadge from '@/components/ui/StatusBadge';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import FloorsTab from '@/components/properties/FloorsTab';
-import UnitsTab from '@/components/properties/UnitsTab';
-import ContractsTab from '@/components/properties/ContractsTab';
+
+const FloorsTab = dynamic(() => import('@/components/properties/FloorsTab'));
+const UnitsTab = dynamic(() => import('@/components/properties/UnitsTab'));
+const ContractsTab = dynamic(() => import('@/components/properties/ContractsTab'));
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -52,10 +54,15 @@ function PageAlert({ type, message, onClose }) {
 export default function PropertyDetailPage() {
   const { uuid } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlTab = searchParams.get('tab') || '';
+  const validTabs = TABS.map((t) => t.id);
+  const initialTab = validTabs.includes(urlTab) ? urlTab : 'overview';
+
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(initialTab);
   const [activeFloor, setActiveFloor] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -126,7 +133,7 @@ export default function PropertyDetailPage() {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-12 text-center max-w-md mx-auto">
         <p className="text-red-600 mb-4">{error}</p>
-        <Link href="/properties" className="btn-secondary">← Back to Properties</Link>
+        <Link href="/properties" className="btn-secondary">? Back to Properties</Link>
       </div>
     );
   }
@@ -136,12 +143,8 @@ export default function PropertyDetailPage() {
     setTab(tabId);
   };
 
-  const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
-
   return (
     <div className="space-y-5">
-
-      {/* Breadcrumb + back */}
       <div className="flex items-center justify-between">
         <nav className="flex items-center gap-2 text-sm text-gray-500">
           <Link href="/properties" className="hover:text-gray-800 transition-colors">Properties</Link>
@@ -158,17 +161,9 @@ export default function PropertyDetailPage() {
         </Link>
       </div>
 
-      {/* Delete error alert */}
-      <PageAlert
-        type={notification?.type}
-        message={notification?.message}
-        onClose={() => setNotification(null)}
-      />
+      <PageAlert type={notification?.type} message={notification?.message} onClose={() => setNotification(null)} />
 
-      {/* ── Summary card ── */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-
-        {/* Name / type / status row + actions */}
         <div className="flex items-start justify-between gap-4 px-6 py-5">
           <div className="flex items-center gap-4 min-w-0">
             <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
@@ -180,54 +175,33 @@ export default function PropertyDetailPage() {
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-gray-900 truncate">{property?.name}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {property?.type && (
-                  <span className="text-sm text-gray-500">{property.type.name}</span>
-                )}
+                {property?.type && <span className="text-sm text-gray-500">{property.type.name}</span>}
                 {property?.type && <span className="text-gray-300">·</span>}
                 <StatusBadge status={property?.status} />
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Link href={`/properties/${uuid}/edit`} className="btn-secondary text-sm">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit
-            </Link>
-            <button
-              className="btn-danger text-sm"
-              onClick={() => setDeleteOpen(true)}
-              disabled={deleting}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Delete
-            </button>
+            <Link href={`/properties/${uuid}/edit`} className="btn-secondary text-sm">Edit</Link>
+            <button className="btn-danger text-sm" onClick={() => setDeleteOpen(true)} disabled={deleting}>Delete</button>
           </div>
         </div>
 
-        {/* Info bar */}
         <div className="border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 divide-x-0 sm:divide-x divide-gray-100">
-          <SummaryCell label="Address" value={property?.address_line} />
-          <SummaryCell label="Postal Code" value={property?.postal_code} />
-          <SummaryCell label="Floors" value={property?.floors_count} large color="#7c3aed" />
-          <SummaryCell label="Units" value={property?.units_count} large color="#2563eb" />
+          <SummaryCell label="Country" value={property?.location?.country?.name ?? property?.address_line ?? null} />
+          <SummaryCell label="Region" value={property?.location?.region?.name} />
+          <SummaryCell label="District" value={property?.location?.district?.name} />
+          <SummaryCell label="Ward" value={property?.location?.ward?.name} />
         </div>
       </div>
 
-      {/* ── Tabs ── */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex gap-0">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => handleTabChange(t.id)}
-              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${tab === t.id
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             >
               {t.label}
             </button>
@@ -235,46 +209,49 @@ export default function PropertyDetailPage() {
         </nav>
       </div>
 
-      {/* ── Tab content ── */}
       {tab === 'overview' && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Property Details</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
-            {[
-              { label: 'Property Name', value: property?.name },
-              { label: 'Property Type', value: property?.type?.name },
-              { label: 'Status', value: cap(property?.status) },
-              { label: 'Address', value: property?.address_line },
-              { label: 'Postal Code', value: property?.postal_code },
-            ].map(({ label, value }) => (
-              <div key={label} className="px-6 py-4">
-                <p className="text-xs font-medium text-gray-400 mb-1">{label}</p>
-                <p className="text-sm font-medium text-gray-800">{value || <span className="text-gray-300">—</span>}</p>
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-6 py-3.5 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Property Details</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+              <div className="px-6 py-4">
+                <p className="text-xs font-medium text-gray-400 mb-1.5">Property Name</p>
+                <p className="text-sm font-semibold text-gray-900">{property?.name || <span className="text-gray-300">—</span>}</p>
               </div>
-            ))}
+              <div className="px-6 py-4">
+                <p className="text-xs font-medium text-gray-400 mb-1.5">Status</p>
+                <StatusBadge status={property?.status} />
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-xs font-medium text-gray-400 mb-1.5">Type</p>
+                <p className="text-sm font-semibold text-gray-900">{property?.type?.name || <span className="text-gray-300">—</span>}</p>
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-xs font-medium text-gray-400 mb-1.5">Address</p>
+                <p className="text-sm font-semibold text-gray-900">{property?.address_line || <span className="text-gray-300">—</span>}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <SummaryCell label="Floors" value={property?.floors_count} large color="#2563eb" />
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <SummaryCell label="Units" value={property?.units_count} large color="#059669" />
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <SummaryCell label="Contracts" value={property?.contracts_count} large color="#ea580c" />
+            </div>
           </div>
         </div>
       )}
 
-      {tab === 'floors' && (
-        <FloorsTab
-          propertyUuid={uuid}
-          onViewUnits={(floor) => {
-            setActiveFloor(floor);
-            setTab('units');
-          }}
-        />
-      )}
-
-      {tab === 'units' && (
-        <UnitsTab propertyUuid={uuid} initialFloor={activeFloor} />
-      )}
-
-      {tab === 'contracts' && (
-        <ContractsTab propertyUuid={uuid} />
-      )}
+      {tab === 'floors' && <FloorsTab propertyUuid={uuid} onNotify={notify} onSelectFloor={setActiveFloor} activeFloor={activeFloor} />}
+      {tab === 'units' && <UnitsTab propertyUuid={uuid} activeFloor={activeFloor} onNotify={notify} />}
+      {tab === 'contracts' && <ContractsTab propertyUuid={uuid} onNotify={notify} />}
 
       <ConfirmModal
         open={deleteOpen}
@@ -282,7 +259,7 @@ export default function PropertyDetailPage() {
         onConfirm={handleDelete}
         loading={deleting}
         title="Delete Property"
-        message={`Delete "${property?.name}"? All floors and units will also be removed. This cannot be undone.`}
+        message={`Delete "${property?.name}"? This cannot be undone.`}
         confirmLabel="Delete Property"
       />
     </div>

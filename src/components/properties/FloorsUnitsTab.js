@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import FloorService from '@/services/FloorService';
 import UnitService from '@/services/UnitService';
 import Modal from '@/components/ui/Modal';
@@ -132,14 +133,14 @@ function FloorModal({ open, onClose, onSave, propertyUuid, initial }) {
 
 function UnitModal({ open, onClose, onSave, floorUuid, initial }) {
   const isEdit = !!initial;
-  const [form, setForm] = useState({ unit_number: '', status: 'vacant' });
+  const [form, setForm] = useState({ unit_number: '', description: '', status: 'vacant' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState(null);
 
   useEffect(() => {
     if (open) {
-      setForm({ unit_number: initial?.unit_number || '', status: initial?.status || 'vacant' });
+      setForm({ unit_number: initial?.unit_number || '', description: initial?.description || '', status: initial?.status || 'vacant' });
       setErrors({});
       setServerError(null);
     }
@@ -153,6 +154,7 @@ function UnitModal({ open, onClose, onSave, floorUuid, initial }) {
     try {
       const payload = {
         unit_number: form.unit_number.trim(),
+        description: form.description || null,
         status: form.status,
         ...(!isEdit && { property_floor_uuid: floorUuid }),
       };
@@ -211,6 +213,18 @@ function UnitModal({ open, onClose, onSave, floorUuid, initial }) {
             <option value="maintenance">Maintenance</option>
           </select>
           <FieldError error={errors.status?.[0]} />
+        </div>
+
+        <div>
+          <label className="label">Description <span className="text-gray-400 font-normal text-xs">(optional)</span></label>
+          <textarea
+            className="input resize-none"
+            rows={2}
+            placeholder="Brief description of this unit..."
+            value={form.description}
+            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+          />
+          <FieldError error={errors.description?.[0]} />
         </div>
 
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
@@ -380,6 +394,12 @@ function FloorRow({ floor, propertyUuid, onFloorUpdated, onFloorDeleted, onNotif
                       <td className="px-4 py-3 text-gray-400">—</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/contracts?unit_uuid=${unit.uuid}&property_uuid=${propertyUuid}`}
+                            className="text-xs font-medium text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded transition-colors"
+                          >
+                            Contracts
+                          </Link>
                           <button
                             className="btn-secondary text-xs py-1 px-2.5"
                             onClick={() => setEditUnit(unit)}

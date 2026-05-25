@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import UnitService from '@/services/UnitService';
 import FloorService from '@/services/FloorService';
 import Pagination from '@/components/ui/Pagination';
@@ -8,6 +9,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const BTN = {
   gray: 'h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors',
+  blue: 'h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors',
   red: 'h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-red-500 hover:bg-red-50 transition-colors',
 };
 
@@ -64,7 +66,7 @@ function FieldError({ error }) {
 
 function UnitModal({ open, onClose, onSaved, floors, initial }) {
   const isEdit = !!initial;
-  const [form, setForm] = useState({ unit_number: '', status: 'vacant', property_floor_uuid: '' });
+  const [form, setForm] = useState({ unit_number: '', description: '', status: 'vacant', property_floor_uuid: '' });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState(null);
@@ -73,6 +75,7 @@ function UnitModal({ open, onClose, onSaved, floors, initial }) {
     if (open) {
       setForm({
         unit_number: initial?.unit_number || '',
+        description: initial?.description || '',
         status: initial?.status || 'vacant',
         property_floor_uuid: initial?.property_floor?.uuid || '',
       });
@@ -89,6 +92,7 @@ function UnitModal({ open, onClose, onSaved, floors, initial }) {
     try {
       const payload = {
         unit_number: form.unit_number.trim(),
+        description: form.description || null,
         status: form.status,
         ...(!isEdit && { property_floor_uuid: form.property_floor_uuid }),
       };
@@ -179,6 +183,18 @@ function UnitModal({ open, onClose, onSaved, floors, initial }) {
             <option value="maintenance">Maintenance</option>
           </select>
           <FieldError error={errors.status?.[0]} />
+        </div>
+
+        <div>
+          <label className="label">Description <span className="text-gray-400 font-normal text-xs">(optional)</span></label>
+          <textarea
+            className="input resize-none"
+            rows={2}
+            placeholder="Brief description of this unit..."
+            value={form.description}
+            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+          />
+          <FieldError error={errors.description?.[0]} />
         </div>
 
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
@@ -404,6 +420,7 @@ export default function UnitsTab({ propertyUuid, initialFloor = null }) {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Link href={`/contracts?unit_uuid=${unit.uuid}&property_uuid=${propertyUuid}`} className={BTN.blue}>Contracts</Link>
                         <button className={BTN.gray} onClick={() => setUnitModal(unit)}>Edit</button>
                         <button className={BTN.red} onClick={() => setDeleteTarget(unit)}>Delete</button>
                       </div>
