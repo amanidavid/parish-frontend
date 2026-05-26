@@ -97,7 +97,7 @@ export default function EditPropertyPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Form */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg p-6">
+        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-md p-6">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">Property Information</p>
 
           {error && (
@@ -118,7 +118,7 @@ export default function EditPropertyPage() {
         </div>
 
         {/* Current details panel */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
+        <div className="bg-white border border-gray-200 rounded-md p-5 space-y-4">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Current Details</p>
           {[
             { label: 'Status', value: property?.status ? property.status.charAt(0).toUpperCase() + property.status.slice(1) : '—' },

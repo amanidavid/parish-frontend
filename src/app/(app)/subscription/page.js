@@ -27,7 +27,7 @@ async function getInitialData() {
   try {
     const [summaryResponse, propertiesResponse] = await Promise.all([
       fetch(`${LARAVEL_BASE}/app/workspace/subscription`, { headers, cache: 'no-store' }),
-      fetch(`${LARAVEL_BASE}/app/workspace/subscription/properties?per_page=15&sort=name`, { headers, cache: 'no-store' }),
+      fetch(`${LARAVEL_BASE}/app/workspace/subscription/properties?per_page=15&sort=-registered_units`, { headers, cache: 'no-store' }),
     ]);
 
     const [summaryPayload, propertiesPayload] = await Promise.all([

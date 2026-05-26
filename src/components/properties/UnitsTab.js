@@ -64,7 +64,7 @@ function FieldError({ error }) {
   return <p className="mt-1 text-xs text-red-600">{error}</p>;
 }
 
-function UnitModal({ open, onClose, onSaved, floors, initial }) {
+function UnitModal({ open, onClose, onSaved, floors, initial, preselectFloorUuid = '' }) {
   const isEdit = !!initial;
   const [form, setForm] = useState({ unit_number: '', description: '', status: 'vacant', property_floor_uuid: '' });
   const [errors, setErrors] = useState({});
@@ -77,12 +77,12 @@ function UnitModal({ open, onClose, onSaved, floors, initial }) {
         unit_number: initial?.unit_number || '',
         description: initial?.description || '',
         status: initial?.status || 'vacant',
-        property_floor_uuid: initial?.property_floor?.uuid || '',
+        property_floor_uuid: initial?.property_floor?.uuid || preselectFloorUuid || '',
       });
       setErrors({});
       setServerError(null);
     }
-  }, [open, initial]);
+  }, [open, initial, preselectFloorUuid]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -211,7 +211,7 @@ function UnitModal({ open, onClose, onSaved, floors, initial }) {
   );
 }
 
-export default function UnitsTab({ propertyUuid, initialFloor = null }) {
+export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFloors }) {
   const [units, setUnits] = useState([]);
   const [meta, setMeta] = useState(null);
   const [page, setPage] = useState(1);
@@ -310,6 +310,18 @@ export default function UnitsTab({ propertyUuid, initialFloor = null }) {
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
+          {initialFloor && onBackToFloors && (
+            <button
+              type="button"
+              onClick={onBackToFloors}
+              className="btn-secondary text-sm inline-flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Floors
+            </button>
+          )}
           <form onSubmit={handleSearch} className="flex items-center gap-2">
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
@@ -355,7 +367,7 @@ export default function UnitsTab({ propertyUuid, initialFloor = null }) {
 
         <button
           className="btn-primary text-sm"
-          onClick={() => setUnitModal('new')}
+          onClick={() => setUnitModal({ mode: 'new', preselectFloorUuid: initialFloor?.uuid || '' })}
           disabled={floorsLoading || floors.length === 0}
           title={floors.length === 0 ? 'Create a floor first before adding units' : undefined}
         >
@@ -439,7 +451,8 @@ export default function UnitsTab({ propertyUuid, initialFloor = null }) {
         onClose={() => setUnitModal(null)}
         onSaved={handleSaved}
         floors={floors}
-        initial={unitModal === 'new' ? null : unitModal}
+        initial={unitModal?.mode === 'new' ? null : unitModal}
+        preselectFloorUuid={unitModal?.preselectFloorUuid || ''}
       />
 
       <ConfirmModal

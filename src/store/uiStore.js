@@ -5,10 +5,12 @@ const useUiStore = create((set) => ({
   sidebarOpen: true,
   activeSlideOver: null,
   notification: null,
+  isNavigating: false,
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   openSlideOver: (payload) => set({ activeSlideOver: payload }),
   closeSlideOver: () => set({ activeSlideOver: null }),
+  setNavigating: (v) => set({ isNavigating: v }),
 
   showNotification: (message, type = 'success') => {
     set({ notification: { message, type } });

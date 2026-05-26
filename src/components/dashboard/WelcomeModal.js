@@ -30,18 +30,16 @@ function Field({ label, required, hint, error, children }) {
 }
 
 export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
-  const [form, setForm] = useState({ name: '', type_uuid: '', address_line: '', region_uuid: '', district_uuid: '', ward_uuid: '' });
+  const [form, setForm] = useState({ name: '', type_uuid: '', address_line: '', region_uuid: '', district_uuid: '' });
   const [countryIso2, setCountryIso2] = useState(TANZANIA_ISO2);
   const isTanzania = countryIso2 === TANZANIA_ISO2;
 
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [regions, setRegions] = useState([]);
   const [districts, setDistricts] = useState([]);
-  const [wards, setWards] = useState([]);
   const [typesLoading, setTypesLoading] = useState(true);
   const [regionsLoading, setRegionsLoading] = useState(false);
   const [districtsLoading, setDistrictsLoading] = useState(false);
-  const [wardsLoading, setWardsLoading] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -73,9 +71,8 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
 
   const handleRegionChange = useCallback((e) => {
     const regionUuid = e.target.value;
-    setForm((p) => ({ ...p, region_uuid: regionUuid, district_uuid: '', ward_uuid: '' }));
+    setForm((p) => ({ ...p, region_uuid: regionUuid, district_uuid: '' }));
     setDistricts([]);
-    setWards([]);
     if (!regionUuid) return;
     setDistrictsLoading(true);
     LocationService.districts(regionUuid)
@@ -84,23 +81,10 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
       .finally(() => setDistrictsLoading(false));
   }, []);
 
-  const handleDistrictChange = useCallback((e) => {
-    const districtUuid = e.target.value;
-    setForm((p) => ({ ...p, district_uuid: districtUuid, ward_uuid: '' }));
-    setWards([]);
-    if (!districtUuid) return;
-    setWardsLoading(true);
-    LocationService.wards(districtUuid)
-      .then((d) => setWards(d?.data || []))
-      .catch(() => { })
-      .finally(() => setWardsLoading(false));
-  }, []);
-
   const handleCountryChange = useCallback((e) => {
     setCountryIso2(e.target.value);
-    setForm((p) => ({ ...p, region_uuid: '', district_uuid: '', ward_uuid: '', address_line: '' }));
+    setForm((p) => ({ ...p, region_uuid: '', district_uuid: '', address_line: '' }));
     setDistricts([]);
-    setWards([]);
     setErrors({});
   }, []);
 
@@ -118,7 +102,7 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
         type_uuid: form.type_uuid || null,
         status: 'active',
         ...(isTanzania
-          ? { ward_uuid: form.ward_uuid || null }
+          ? { district_uuid: form.district_uuid || null }
           : { address_line: form.address_line || null }
         ),
       };
@@ -144,14 +128,12 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
       style={{ backgroundColor: 'rgba(10,15,30,0.65)', backdropFilter: 'blur(4px)' }}
     >
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
-
-        {/* Header */}
         <div className="relative overflow-hidden px-7 pt-7 pb-6 text-center shrink-0"
           style={{ background: 'linear-gradient(135deg, #1d4ed8 0%, #4f46e5 100%)' }}>
           <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-10 bg-white" />
           <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full opacity-10 bg-white" />
           <div className="relative">
-            <div className="text-3xl mb-2">🏢</div>
+            <div className="text-3xl mb-2">??</div>
             <h2 className="text-lg font-bold text-white leading-tight">
               {userName ? `Welcome, ${userName.split(' ')[0]}!` : 'Welcome!'}
             </h2>
@@ -161,7 +143,6 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
           </div>
         </div>
 
-        {/* Scrollable form */}
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
           <div className="px-7 py-5 space-y-4">
             {serverError && (
@@ -202,18 +183,11 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
                       {regions.map((r) => <option key={r.uuid} value={r.uuid}>{r.name}</option>)}
                     </select>
                   </Field>
-                  <Field label="District" error={errors?.district_uuid?.[0]}>
+                  <Field label="District" error={errors?.district_uuid?.[0]} hint="Country and region are derived from the selected district when the property is saved.">
                     <select name="district_uuid" className="input" value={form.district_uuid}
-                      onChange={handleDistrictChange} disabled={!form.region_uuid || districtsLoading}>
+                      onChange={handleChange} disabled={!form.region_uuid || districtsLoading}>
                       <option value="">{!form.region_uuid ? 'Select region first' : districtsLoading ? 'Loading...' : 'Select district (optional)'}</option>
                       {districts.map((d) => <option key={d.uuid} value={d.uuid}>{d.name}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Ward" error={errors?.ward_uuid?.[0]}>
-                    <select name="ward_uuid" className="input" value={form.ward_uuid}
-                      onChange={handleChange} disabled={!form.district_uuid || wardsLoading}>
-                      <option value="">{!form.district_uuid ? 'Select district first' : wardsLoading ? 'Loading...' : 'Select ward (optional)'}</option>
-                      {wards.map((w) => <option key={w.uuid} value={w.uuid}>{w.name}</option>)}
                     </select>
                   </Field>
                 </>
@@ -232,7 +206,7 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
               className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity"
               style={{ background: 'linear-gradient(135deg, #2563eb, #4f46e5)', opacity: saving ? 0.7 : 1 }}>
               {saving && <Spinner />}
-              {saving ? 'Saving…' : 'Save Property Details'}
+              {saving ? 'Saving...' : 'Save Property Details'}
             </button>
             <button type="button" onClick={onSkip} disabled={saving}
               className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition-colors">

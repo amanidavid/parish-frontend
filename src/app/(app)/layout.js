@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
+import PageProgress from '@/components/ui/PageProgress';
 import useUiStore from '@/store/uiStore';
 
 export default function AppLayout({ children }) {
@@ -34,6 +35,9 @@ export default function AppLayout({ children }) {
 
       {/* Sidebar — overlay on mobile, in-flow on desktop */}
       <Sidebar open={sidebarOpen} />
+
+      {/* Global page-transition loader */}
+      <PageProgress />
 
       {/* Main column */}
       <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">

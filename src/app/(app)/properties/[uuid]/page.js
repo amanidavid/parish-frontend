@@ -133,7 +133,7 @@ export default function PropertyDetailPage() {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-12 text-center max-w-md mx-auto">
         <p className="text-red-600 mb-4">{error}</p>
-        <Link href="/properties" className="btn-secondary">? Back to Properties</Link>
+        <Link href="/properties" className="btn-secondary">Back to Properties</Link>
       </div>
     );
   }
@@ -188,10 +188,10 @@ export default function PropertyDetailPage() {
         </div>
 
         <div className="border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 divide-x-0 sm:divide-x divide-gray-100">
-          <SummaryCell label="Country" value={property?.location?.country?.name ?? property?.address_line ?? null} />
-          <SummaryCell label="Region" value={property?.location?.region?.name} />
-          <SummaryCell label="District" value={property?.location?.district?.name} />
-          <SummaryCell label="Ward" value={property?.location?.ward?.name} />
+          <SummaryCell label="Country" value={property?.location?.country?.name ?? null} />
+          <SummaryCell label="Region" value={property?.location?.region?.name ?? null} />
+          <SummaryCell label="District" value={property?.location?.district?.name ?? null} />
+          <SummaryCell label="Address" value={property?.address_line ?? null} />
         </div>
       </div>
 
@@ -249,8 +249,15 @@ export default function PropertyDetailPage() {
         </div>
       )}
 
-      {tab === 'floors' && <FloorsTab propertyUuid={uuid} onNotify={notify} onSelectFloor={setActiveFloor} activeFloor={activeFloor} />}
-      {tab === 'units' && <UnitsTab propertyUuid={uuid} activeFloor={activeFloor} onNotify={notify} />}
+      {tab === 'floors' && <FloorsTab propertyUuid={uuid} onViewUnits={(floor) => { setActiveFloor(floor); setTab('units'); }} />}
+      {tab === 'units' && (
+        <UnitsTab
+          propertyUuid={uuid}
+          initialFloor={activeFloor}
+          onNotify={notify}
+          onBackToFloors={() => { setActiveFloor(null); setTab('floors'); }}
+        />
+      )}
       {tab === 'contracts' && <ContractsTab propertyUuid={uuid} onNotify={notify} />}
 
       <ConfirmModal

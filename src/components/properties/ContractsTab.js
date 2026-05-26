@@ -98,8 +98,16 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
   const customerSearchTimer = useRef(null);
   const customerInputRef = useRef(null);
   const customerDropdownRef = useRef(null);
+
+  /* ─── Unit search state ─── */
   const [units, setUnits] = useState([]);
   const [unitsLoading, setUnitsLoading] = useState(false);
+  const [unitSearch, setUnitSearch] = useState('');
+  const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
+  const [selectedUnitName, setSelectedUnitName] = useState('');
+  const unitSearchTimer = useRef(null);
+  const unitInputRef = useRef(null);
+  const unitDropdownRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -118,25 +126,35 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
       });
       setSelectedCustomerName(initial.customer?.display_name || '');
       setCustomerSearch(initial.customer?.display_name || '');
+      const unitLabel = initial.unit ? `${initial.unit.unit_number}${initial.unit.property_floor ? ` — ${initial.unit.property_floor.name}` : ''}` : '';
+      setSelectedUnitName(unitLabel);
+      setUnitSearch(unitLabel);
     } else {
       setForm(emptyForm);
       setSelectedCustomerName('');
       setCustomerSearch('');
+      setSelectedUnitName('');
+      setUnitSearch('');
     }
     setCustomers([]);
     setCustomerDropdownOpen(false);
+    setUnits([]);
+    setUnitDropdownOpen(false);
     setErrors({});
     setServerError(null);
   }, [open, isEdit, initial]);
 
-  useEffect(() => {
-    if (!open) return;
+  /*
+   * Unit search: server-side via GET /api/v1/app/units?property_uuid={uuid}&search={q}&per_page=20&sort=unit_number
+   * Debounced (300ms) to avoid flooding the backend.
+   */
+  const fetchUnits = useCallback((query) => {
     setUnitsLoading(true);
-    UnitService.listAllByProperty(propertyUuid)
+    UnitService.listByProperty(propertyUuid, { search: query || undefined, perPage: 20 })
       .then((data) => { if (data?.success) setUnits(data.data || []); })
       .catch(() => { })
       .finally(() => setUnitsLoading(false));
-  }, [open, propertyUuid]);
+  }, [propertyUuid]);
 
   const fetchCustomers = useCallback((query) => {
     setCustomersLoading(true);
@@ -181,6 +199,40 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
     setCustomerDropdownOpen(false);
   };
 
+  const handleUnitInputChange = (e) => {
+    const val = e.target.value;
+    setUnitSearch(val);
+    setUnitDropdownOpen(true);
+    if (unitSearchTimer.current) clearTimeout(unitSearchTimer.current);
+    unitSearchTimer.current = setTimeout(() => {
+      fetchUnits(val.trim());
+    }, 300);
+  };
+
+  const handleUnitFocus = () => {
+    setUnitDropdownOpen(true);
+    if (units.length === 0 && !unitsLoading) {
+      fetchUnits(unitSearch.trim());
+    }
+  };
+
+  const selectUnit = (unit) => {
+    const label = `${unit.unit_number}${unit.property_floor ? ` — ${unit.property_floor.name}` : ''}`;
+    setForm((p) => ({ ...p, unit_uuid: unit.uuid }));
+    setSelectedUnitName(label);
+    setUnitSearch(label);
+    setUnitDropdownOpen(false);
+    setErrors((p) => ({ ...p, unit_uuid: null }));
+  };
+
+  const clearUnit = () => {
+    setForm((p) => ({ ...p, unit_uuid: '' }));
+    setSelectedUnitName('');
+    setUnitSearch('');
+    setUnits([]);
+    setUnitDropdownOpen(false);
+  };
+
   useEffect(() => {
     if (!customerDropdownOpen) return;
     const handleClickOutside = (e) => {
@@ -191,6 +243,24 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [customerDropdownOpen]);
+
+  useEffect(() => {
+    if (!unitDropdownOpen) return;
+    const handleClickOutside = (e) => {
+      if (unitDropdownRef.current && !unitDropdownRef.current.contains(e.target)) {
+        setUnitDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [unitDropdownOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (customerSearchTimer.current) clearTimeout(customerSearchTimer.current);
+      if (unitSearchTimer.current) clearTimeout(unitSearchTimer.current);
+    };
+  }, []);
 
   const change = (e) => {
     const { name, value } = e.target;
@@ -277,13 +347,13 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
                 </button>
               )}
               {customerDropdownOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
                   {customersLoading ? (
-                    <div className="px-3 py-2 text-sm text-gray-400 flex items-center gap-2">
-                      <Spinner /> Searching...
+                    <div className="px-4 py-3 text-sm text-gray-400 flex items-center gap-2">
+                      <Spinner /> Searching customers...
                     </div>
                   ) : customers.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-gray-400">
+                    <div className="px-4 py-3 text-sm text-gray-400">
                       {customerSearch.trim() ? 'No customers found.' : 'Type to search customers...'}
                     </div>
                   ) : (
@@ -292,7 +362,7 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
                         key={c.uuid}
                         type="button"
                         onClick={() => selectCustomer(c)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${form.customer_uuid === c.uuid ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-gray-50 last:border-0 ${form.customer_uuid === c.uuid ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
                           }`}
                       >
                         <span className="font-medium">{c.display_name}</span>
@@ -308,24 +378,65 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
             <FieldError message={errors?.customer_uuid?.[0]} />
           </div>
 
-          {/* Unit */}
-          <div className="sm:col-span-2">
+          {/* Unit — server-side searchable dropdown via UnitService.listByProperty */}
+          <div className="sm:col-span-2 relative" ref={unitDropdownRef}>
             <label className="label">Unit <span className="text-red-500">*</span></label>
-            <select
-              name="unit_uuid"
-              className="input text-sm"
-              value={form.unit_uuid}
-              onChange={change}
-              required
-              disabled={unitsLoading}
-            >
-              <option value="">{unitsLoading ? 'Loading units...' : 'Select unit'}</option>
-              {units.map((u) => (
-                <option key={u.uuid} value={u.uuid}>
-                  {u.unit_number}{u.property_floor ? ` — ${u.property_floor.name}` : ''}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input
+                ref={unitInputRef}
+                type="text"
+                className="input pl-9 pr-8 text-sm w-full"
+                placeholder="Search and select a unit..."
+                value={unitSearch}
+                onChange={handleUnitInputChange}
+                onFocus={handleUnitFocus}
+                autoComplete="off"
+              />
+              {form.unit_uuid && (
+                <button
+                  type="button"
+                  onClick={clearUnit}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              {unitDropdownOpen && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                  {unitsLoading ? (
+                    <div className="px-4 py-3 text-sm text-gray-400 flex items-center gap-2">
+                      <Spinner /> Searching units...
+                    </div>
+                  ) : units.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-400">
+                      {unitSearch.trim() ? 'No units found.' : 'Type to search units...'}
+                    </div>
+                  ) : (
+                    units.map((u) => (
+                      <button
+                        key={u.uuid}
+                        type="button"
+                        onClick={() => selectUnit(u)}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-gray-50 last:border-0 ${form.unit_uuid === u.uuid ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                      >
+                        <span className="font-medium">{u.unit_number}</span>
+                        {u.property_floor && (
+                          <span className="ml-2 text-xs text-gray-400">{u.property_floor.name}</span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             <FieldError message={errors?.unit_uuid?.[0]} />
           </div>
 

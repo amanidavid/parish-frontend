@@ -215,7 +215,7 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
                       {prop.type?.name || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-5 py-3.5 text-gray-500 text-sm">
-                      {prop.location?.ward?.name || prop.address_line || <span className="text-gray-300">—</span>}
+                      {prop.location?.district?.name || prop.address_line || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <span className="inline-flex items-center justify-center min-w-[28px] h-6 rounded bg-gray-100 text-gray-600 text-xs font-semibold px-2">

@@ -7,14 +7,16 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const PER_PAGE = 50;
 
-const CUSTOMER_STATUS = {
-  active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700' },
-  inactive: { label: 'Inactive', bg: 'bg-gray-100', text: 'text-gray-600' },
-};
-
 function StatusBadge({ status }) {
-  const s = CUSTOMER_STATUS[status] || CUSTOMER_STATUS.inactive;
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${s.bg} ${s.text}`}>{s.label}</span>;
+  return status === 'active'
+    ? <span className="badge badge-green">Active</span>
+    : <span className="badge badge-gray">Inactive</span>;
+}
+
+function TypeBadge({ type }) {
+  return type === 'business'
+    ? <span className="badge badge-blue">Business</span>
+    : <span className="badge badge-gray">Individual</span>;
 }
 
 function SkeletonRow() {
@@ -142,25 +144,77 @@ export default function CustomersPageClient({ initialItems = [], initialMeta = n
         {meta && <p className="text-sm text-gray-400"><span className="font-medium text-gray-700">{meta.total ?? 0}</span> total</p>}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="data-table-wrap">
         {error && <div className="m-4 text-sm text-red-700">{error}</div>}
-        <table className="w-full text-sm">
-          <thead><tr className="bg-gray-50 border-b border-gray-200"><th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th><th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th><th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th><th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contracts</th><th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th></tr></thead>
-          <tbody>
-            {loading ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />) : customers.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-16 text-sm text-gray-500">No customers found.</td></tr>
-            ) : customers.map((customer) => (
-              <tr key={customer.uuid} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-3.5 font-medium text-gray-900">{cap(customer.display_name)}</td>
-                <td className="px-5 py-3.5 text-xs text-gray-500">{customer.customer_type}</td>
-                <td className="px-5 py-3.5 text-xs text-gray-500">{customer.email || customer.phone || <span className="text-gray-300">—</span>}</td>
-                <td className="px-5 py-3.5"><StatusBadge status={customer.status} /></td>
-                <td className="px-5 py-3.5 text-center">{customer.contracts_count ?? 0}</td>
-                <td className="px-5 py-3.5 text-right"><div className="flex items-center justify-end gap-1"><Link href={`/customers/${customer.uuid}`} className={BTN.blue}>View</Link><Link href={`/customers/${customer.uuid}/edit`} className={BTN.gray}>Edit</Link><button className={BTN.red} onClick={() => setDeleteTarget(customer)}>Delete</button></div></td>
+        <div className="overflow-x-auto no-scrollbar">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Contact</th>
+                <th>Status</th>
+                <th className="text-center">Contracts</th>
+                <th className="text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loading ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />) : customers.length === 0 ? (
+                <tr><td colSpan={6} className="text-center py-16 text-sm text-gray-500">No customers found.</td></tr>
+              ) : customers.map((customer) => (
+                <tr key={customer.uuid}>
+                  <td>
+                    <p className="font-semibold text-gray-900 text-sm">{cap(customer.display_name)}</p>
+                    {customer.customer_type === 'business' && customer.business_detail?.business_name && (
+                      <p className="text-xs text-gray-400 mt-0.5">{customer.business_detail.business_name}</p>
+                    )}
+                  </td>
+                  <td><TypeBadge type={customer.customer_type} /></td>
+                  <td>
+                    {customer.email && (
+                      <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                        <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span>{customer.email}</span>
+                      </div>
+                    )}
+                    {customer.phone && (
+                      <div className="flex items-center gap-1.5 text-xs text-gray-600 mt-0.5">
+                        <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        <span>{customer.phone}</span>
+                      </div>
+                    )}
+                    {customer.customer_type === 'business' && customer.business_detail?.contact_person_name && (
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-0.5">
+                        <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Contact: {customer.business_detail.contact_person_name}</span>
+                      </div>
+                    )}
+                    {!customer.email && !customer.phone && <span className="text-gray-300 text-xs">—</span>}
+                  </td>
+                  <td><StatusBadge status={customer.status} /></td>
+                  <td className="text-center">
+                    <span className="badge badge-blue" style={{ borderRadius: '0.375rem' }}>
+                      {customer.contracts_count ?? 0}
+                    </span>
+                  </td>
+                  <td className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/customers/${customer.uuid}`} className={BTN.blue}>View</Link>
+                      <Link href={`/customers/${customer.uuid}/edit`} className={BTN.gray}>Edit</Link>
+                      <button className={BTN.red} onClick={() => setDeleteTarget(customer)}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {meta && <Pagination meta={meta} onPageChange={setPage} />}
       </div>
 
