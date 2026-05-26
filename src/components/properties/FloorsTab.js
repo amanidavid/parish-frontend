@@ -155,6 +155,7 @@ export default function FloorsTab({ propertyUuid, onViewUnits }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const searchRef = useRef(null);
+  const abortRef = useRef(null);
 
   useEffect(() => {
     if (!notification) return;
@@ -162,21 +163,36 @@ export default function FloorsTab({ propertyUuid, onViewUnits }) {
     return () => clearTimeout(t);
   }, [notification]);
 
+  /* Abort any in-flight floors request on unmount */
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
+
   const notify = useCallback((type, message) => setNotification({ type, message }), []);
 
-  const loadFloors = useCallback(() => {
+  const loadFloors = useCallback(async () => {
+    /* Cancel previous in-flight request — prevents stale-data race conditions */
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+    const { signal } = abortRef.current;
+
     setLoading(true);
-    FloorService.list(propertyUuid, { search: appliedSearch || undefined, page })
-      .then((data) => {
-        if (data?.success) {
-          setFloors(data.data || []);
-          setMeta(data.meta || null);
-        } else {
-          notify('error', data?.message);
-        }
-      })
-      .catch(() => notify('error', 'Network error'))
-      .finally(() => setLoading(false));
+    try {
+      const data = await FloorService.list(propertyUuid, {
+        search: appliedSearch || undefined,
+        page,
+        signal,
+      });
+      if (signal.aborted) return;
+      if (data?.success) {
+        setFloors(data.data || []);
+        setMeta(data.meta || null);
+      } else {
+        notify('error', data?.message);
+      }
+    } catch (err) {
+      if (err?.name !== 'AbortError') notify('error', 'Network error');
+    } finally {
+      if (!signal.aborted) setLoading(false);
+    }
   }, [propertyUuid, appliedSearch, page, notify]);
 
   useEffect(() => { loadFloors(); }, [loadFloors]);
@@ -195,7 +211,13 @@ export default function FloorsTab({ propertyUuid, onViewUnits }) {
 
   const handleSaved = (floor, isEdit, message) => {
     notify('success', message);
-    loadFloors();
+    if (isEdit) {
+      /* Optimistic in-place update — no server round-trip for edits */
+      setFloors((prev) => prev.map((f) => f.uuid === floor.uuid ? { ...f, ...floor } : f));
+    } else {
+      /* New floor: navigate to page 1 to show it, or re-fetch if already there */
+      if (page !== 1) setPage(1); else loadFloors();
+    }
   };
 
   const handleDelete = async () => {
@@ -205,7 +227,7 @@ export default function FloorsTab({ propertyUuid, onViewUnits }) {
       const data = await FloorService.destroy(deleteTarget.uuid);
       if (data?.success !== false) {
         notify('success', data?.message);
-        loadFloors();
+        loadFloors(); /* re-fetch needed — pagination row count changes */
       } else {
         notify('error', data?.message);
       }

@@ -91,29 +91,33 @@ function SkeletonRow() {
   );
 }
 
-export default function SubscriptionPageClient({ initialSummary = null, initialSummaryError = null, initialProperties = [], initialMeta = null, initialTableError = null }) {
+export default function SubscriptionPageClient({ initialSummary = null, initialSummaryError = null }) {
   const [activeTab, setActiveTab] = useState('summary');
   const [summary, setSummary] = useState(initialSummary);
   const [summaryLoading, setSummaryLoading] = useState(!initialSummary && !initialSummaryError);
   const [summaryError, setSummaryError] = useState(initialSummaryError);
-  const [properties, setProperties] = useState(initialProperties);
-  const [meta, setMeta] = useState(initialMeta);
-  const [tableLoading, setTableLoading] = useState(!initialMeta && !initialTableError);
-  const [tableError, setTableError] = useState(initialTableError);
+  const [properties, setProperties] = useState([]);
+  const [meta, setMeta] = useState(null);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [tableError, setTableError] = useState(null);
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sort, setSort] = useState('-registered_units');
-  const [page, setPage] = useState(initialMeta?.current_page ?? 1);
+  const [page, setPage] = useState(1);
   const searchRef = useRef(null);
 
   /*
-   * Performance pattern: both tabs are SSR-prefetched via Promise.all in page.js.
-   * Hydration guards prevent re-fetching already-served data on mount.
-   * Both tab panels stay mounted (CSS hidden) so no re-mount or re-fetch on tab switch.
+   * Performance pattern:
+   *  - Summary tab is SSR-fetched (fast TTFB, active tab ready immediately).
+   *  - Properties tab is lazy-loaded client-side on FIRST open only.
+   *  - After first load, state is cached — tab switches are instant, no re-fetch.
+   *  - Filter/sort/page changes re-fetch only while the tab has been opened.
+   *  - AbortController cancels in-flight requests when new ones start.
    */
   const hydratedSummaryRef = useRef(Boolean(initialSummary) && !initialSummaryError);
-  const hydratedTableRef = useRef(Boolean(initialMeta) && !initialTableError);
+  const propertiesTabOpenedRef = useRef(false);
+  const propertiesAbortRef = useRef(null);
 
   const fetchSummary = useCallback(async () => {
     setSummaryLoading(true); setSummaryError(null);
@@ -126,13 +130,29 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
   }, []);
 
   const fetchProperties = useCallback(async () => {
+    /* Cancel any previous in-flight request to prevent stale overwrites */
+    if (propertiesAbortRef.current) propertiesAbortRef.current.abort();
+    propertiesAbortRef.current = new AbortController();
+    const signal = propertiesAbortRef.current.signal;
+
     setTableLoading(true); setTableError(null);
     try {
-      const data = await SubscriptionService.properties({ search: appliedSearch || undefined, status: statusFilter || undefined, sort, page, perPage: PER_PAGE });
+      const data = await SubscriptionService.properties({
+        search: appliedSearch || undefined,
+        status: statusFilter || undefined,
+        sort,
+        page,
+        perPage: PER_PAGE,
+        signal,
+      });
+      if (signal.aborted) return;
       if (data?.success && data?.data) { setProperties(data.data || []); setMeta(data.meta || null); }
       else setTableError(data?.message || 'Failed to load property breakdown');
-    } catch { setTableError('Network error'); }
-    finally { setTableLoading(false); }
+    } catch (err) {
+      if (err?.name !== 'AbortError') setTableError('Network error');
+    } finally {
+      if (!signal.aborted) setTableLoading(false);
+    }
   }, [appliedSearch, statusFilter, sort, page]);
 
   useEffect(() => {
@@ -140,10 +160,21 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
     fetchSummary();
   }, [fetchSummary]);
 
+  /* Effect 1: Trigger the FIRST fetch when the properties tab is opened */
   useEffect(() => {
-    if (hydratedTableRef.current) { hydratedTableRef.current = false; return; }
+    if (activeTab !== 'properties' || propertiesTabOpenedRef.current) return;
+    propertiesTabOpenedRef.current = true;
+    fetchProperties();
+  }, [activeTab, fetchProperties]);
+
+  /* Effect 2: Re-fetch when filters/sort/page change AFTER tab has been opened */
+  useEffect(() => {
+    if (!propertiesTabOpenedRef.current) return;
     fetchProperties();
   }, [fetchProperties]);
+
+  /* Cleanup: abort any pending properties request on unmount */
+  useEffect(() => () => { propertiesAbortRef.current?.abort(); }, []);
 
   const handleSearch = (e) => { e.preventDefault(); setPage(1); setAppliedSearch(searchInput.trim()); };
   const handleClear = () => { setSearchInput(''); setAppliedSearch(''); setStatusFilter(''); setSort('-registered_units'); setPage(1); };
@@ -156,11 +187,6 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
 
   return (
     <div className="space-y-5">
-      <style jsx global>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
-
       {/* Page header */}
       <div>
         <h1 className="text-xl font-bold text-gray-900">Subscription</h1>
@@ -344,7 +370,7 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
         {tableError && <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{tableError}</div>}
 
         <div className="data-table-wrap">
-          <div className="overflow-x-auto no-scrollbar">
+          <div className="overflow-x-auto scrollbar-hide">
             <table className="data-table">
               <thead>
                 <tr>

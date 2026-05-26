@@ -11,11 +11,16 @@ const FloorService = {
     });
     if (params.search) query.set('search', params.search);
     if (params.page && params.page > 1) query.set('page', params.page);
-    return apiFetch(`${BASE}?${query}`);
+    return apiFetch(`${BASE}?${query}`, {
+      ...(params.signal ? { signal: params.signal } : {}),
+    });
   },
 
-  async listAll(propertyUuid) {
-    return apiFetch(`${BASE}?property_uuid=${propertyUuid}&per_page=100&sort=floor_number`);
+  async listAll(propertyUuid, params = {}) {
+    return apiFetch(
+      `${BASE}?property_uuid=${propertyUuid}&per_page=100&sort=floor_number`,
+      { ...(params.signal ? { signal: params.signal } : {}) },
+    );
   },
 
   async store(data) {

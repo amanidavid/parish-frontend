@@ -11,7 +11,9 @@ const UnitService = {
     });
     if (params.search) query.set('search', params.search);
     if (params.page && params.page > 1) query.set('page', params.page);
-    return apiFetch(`${BASE}?${query}`);
+    return apiFetch(`${BASE}?${query}`, {
+      ...(params.signal ? { signal: params.signal } : {}),
+    });
   },
 
   async listByFloor(floorUuid, params = {}) {
@@ -22,7 +24,9 @@ const UnitService = {
     });
     if (params.search) query.set('search', params.search);
     if (params.page && params.page > 1) query.set('page', params.page);
-    return apiFetch(`${BASE}?${query}`);
+    return apiFetch(`${BASE}?${query}`, {
+      ...(params.signal ? { signal: params.signal } : {}),
+    });
   },
 
   async listAllByProperty(propertyUuid) {

@@ -3,19 +3,18 @@ import SubscriptionPageClient from './SubscriptionPageClient';
 
 const LARAVEL_BASE = process.env.LARAVEL_API_URL || 'http://localhost:8000/api/v1';
 
+/**
+ * SSR only the active tab (Billing Summary) for fast TTFB.
+ * Property Cost Breakdown is lazy-loaded client-side on first tab open,
+ * then cached in React state — no re-fetch on subsequent tab switches.
+ */
 async function getInitialData() {
   const jar = await cookies();
   const token = jar.get('app_token')?.value;
   const tenantUuid = jar.get('tenant_uuid')?.value;
 
   if (!token || !tenantUuid) {
-    return {
-      summary: null,
-      summaryError: null,
-      properties: [],
-      meta: null,
-      tableError: null,
-    };
+    return { summary: null, summaryError: null };
   }
 
   const headers = {
@@ -25,31 +24,19 @@ async function getInitialData() {
   };
 
   try {
-    const [summaryResponse, propertiesResponse] = await Promise.all([
-      fetch(`${LARAVEL_BASE}/app/workspace/subscription`, { headers, cache: 'no-store' }),
-      fetch(`${LARAVEL_BASE}/app/workspace/subscription/properties?per_page=15&sort=-registered_units`, { headers, cache: 'no-store' }),
-    ]);
-
-    const [summaryPayload, propertiesPayload] = await Promise.all([
-      summaryResponse.json().catch(() => null),
-      propertiesResponse.json().catch(() => null),
-    ]);
-
+    const summaryResponse = await fetch(
+      `${LARAVEL_BASE}/app/workspace/subscription`,
+      { headers, cache: 'no-store' },
+    );
+    const summaryPayload = await summaryResponse.json().catch(() => null);
     return {
       summary: summaryResponse.ok && summaryPayload?.success ? (summaryPayload.data || null) : null,
-      summaryError: summaryResponse.ok && summaryPayload?.success ? null : (summaryPayload?.message || 'Failed to load subscription summary'),
-      properties: propertiesResponse.ok && propertiesPayload?.success ? (propertiesPayload.data || []) : [],
-      meta: propertiesResponse.ok && propertiesPayload?.success ? (propertiesPayload.meta || null) : null,
-      tableError: propertiesResponse.ok && propertiesPayload?.success ? null : (propertiesPayload?.message || 'Failed to load property breakdown'),
+      summaryError: summaryResponse.ok && summaryPayload?.success
+        ? null
+        : (summaryPayload?.message || 'Failed to load subscription summary'),
     };
   } catch {
-    return {
-      summary: null,
-      summaryError: 'Network error',
-      properties: [],
-      meta: null,
-      tableError: 'Network error',
-    };
+    return { summary: null, summaryError: 'Network error' };
   }
 }
 
@@ -59,9 +46,6 @@ export default async function Page() {
     <SubscriptionPageClient
       initialSummary={initial.summary}
       initialSummaryError={initial.summaryError}
-      initialProperties={initial.properties}
-      initialMeta={initial.meta}
-      initialTableError={initial.tableError}
     />
   );
 }

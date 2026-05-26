@@ -13,7 +13,9 @@ const SubscriptionService = {
     if (params.status) query.set('status', params.status);
     if (params.sort) query.set('sort', params.sort);
     if (params.page && params.page > 1) query.set('page', params.page);
-    return apiFetch(`${BASE}/properties?${query}`);
+    return apiFetch(`${BASE}/properties?${query}`, {
+      ...(params.signal ? { signal: params.signal } : {}),
+    });
   },
 };
 

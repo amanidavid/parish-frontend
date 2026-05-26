@@ -226,6 +226,8 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const searchRef = useRef(null);
+  const unitsAbortRef = useRef(null);
+  const floorsAbortRef = useRef(null);
 
   useEffect(() => {
     if (!notification) return;
@@ -233,36 +235,57 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
     return () => clearTimeout(t);
   }, [notification]);
 
+  /* Abort all in-flight requests on unmount */
+  useEffect(() => () => {
+    unitsAbortRef.current?.abort();
+    floorsAbortRef.current?.abort();
+  }, []);
+
   const notify = useCallback((type, message) => setNotification({ type, message }), []);
 
+  /* Load floors for the filter dropdown — bounded to 100 rows, abortable */
   useEffect(() => {
-    FloorService.listAll(propertyUuid)
-      .then((data) => { if (data?.success) setFloors(data.data || []); })
-      .catch(() => { })
-      .finally(() => setFloorsLoading(false));
+    floorsAbortRef.current?.abort();
+    floorsAbortRef.current = new AbortController();
+    const { signal } = floorsAbortRef.current;
+
+    FloorService.list(propertyUuid, { perPage: 100, signal })
+      .then((data) => {
+        if (signal.aborted) return;
+        if (data?.success) setFloors(data.data || []);
+      })
+      .catch((err) => { if (err?.name === 'AbortError') return; })
+      .finally(() => { if (!signal.aborted) setFloorsLoading(false); });
   }, [propertyUuid]);
 
   useEffect(() => {
     setSelectedFloorUuid(initialFloor?.uuid || '');
   }, [initialFloor]);
 
-  const loadUnits = useCallback(() => {
+  const loadUnits = useCallback(async () => {
+    /* Cancel previous in-flight request — prevents stale-data race conditions */
+    unitsAbortRef.current?.abort();
+    unitsAbortRef.current = new AbortController();
+    const { signal } = unitsAbortRef.current;
+
     setUnitsLoading(true);
-    const params = { page, search: appliedSearch || undefined };
-    const request = selectedFloorUuid
-      ? UnitService.listByFloor(selectedFloorUuid, params)
-      : UnitService.listByProperty(propertyUuid, params);
-    request
-      .then((data) => {
-        if (data?.success) {
-          setUnits(data.data || []);
-          setMeta(data.meta || null);
-        } else {
-          notify('error', data?.message);
-        }
-      })
-      .catch(() => notify('error', 'Network error'))
-      .finally(() => setUnitsLoading(false));
+    const params = { page, search: appliedSearch || undefined, signal };
+    try {
+      const data = await (selectedFloorUuid
+        ? UnitService.listByFloor(selectedFloorUuid, params)
+        : UnitService.listByProperty(propertyUuid, params));
+      if (signal.aborted) return;
+      if (data?.success) {
+        setUnits(data.data || []);
+        setMeta(data.meta || null);
+      } else {
+        notify('error', data?.message);
+      }
+    } catch (err) {
+      if (err?.name !== 'AbortError') notify('error', 'Network error');
+    } finally {
+      if (!signal.aborted) setUnitsLoading(false);
+    }
   }, [selectedFloorUuid, propertyUuid, appliedSearch, page, notify]);
 
   useEffect(() => { loadUnits(); }, [loadUnits]);
@@ -281,7 +304,13 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
 
   const handleSaved = (unit, isEdit, message) => {
     notify('success', message);
-    loadUnits();
+    if (isEdit) {
+      /* Optimistic in-place update — no server round-trip for edits */
+      setUnits((prev) => prev.map((u) => u.uuid === unit.uuid ? { ...u, ...unit } : u));
+    } else {
+      /* New unit: go to page 1 to show it, or re-fetch if already there */
+      if (page !== 1) setPage(1); else loadUnits();
+    }
   };
 
   const handleDelete = async () => {
@@ -291,7 +320,7 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
       const data = await UnitService.destroy(deleteTarget.uuid);
       if (data?.success !== false) {
         notify('success', data?.message);
-        loadUnits();
+        loadUnits(); /* re-fetch needed — pagination row count changes */
       } else {
         notify('error', data?.message);
       }
