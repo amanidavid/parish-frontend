@@ -1,15 +1,19 @@
 import apiFetch from '@/lib/apiFetch';
 
-const BASE = '/api/v1/app/staff-users';
+const BASE = '/api/v1/app/staff-property-assignments';
 
-const StaffService = {
-  async list(params = {}) {
-    const query = new URLSearchParams({ per_page: params.perPage || 15, sort: 'name' });
-    if (params.search) query.set('search', params.search);
-    if (params.status) query.set('status', params.status);
-    if (params.role) query.set('role', params.role);
-    if (params.page && params.page > 1) query.set('page', params.page);
-    return apiFetch(`${BASE}?${query}`);
+function buildQuery(params = {}) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== null && val !== undefined && val !== '') qs.set(key, val);
+  });
+  const str = qs.toString();
+  return str ? `?${str}` : '';
+}
+
+const StaffPropertyAssignmentService = {
+  async index(params = {}) {
+    return apiFetch(`${BASE}${buildQuery(params)}`);
   },
 
   async show(uuid) {
@@ -37,4 +41,4 @@ const StaffService = {
   },
 };
 
-export default StaffService;
+export default StaffPropertyAssignmentService;

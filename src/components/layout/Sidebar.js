@@ -1,5 +1,5 @@
 'use client';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import useAuthStore from '@/store/authStore';
@@ -21,6 +21,7 @@ const NAV_GROUPS = [
       {
         href: '/properties',
         label: 'Properties',
+        permission: 'properties.view',
         icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
       },
 
@@ -32,41 +33,48 @@ const NAV_GROUPS = [
       {
         href: '/customers',
         label: 'Customers',
+        permission: 'customers.view',
         icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
       },
-      /* {
-        href: '/contracts',
-        label: 'Contracts',
-        icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-      }, */
       {
         href: '/staff',
         label: 'Staff',
+        permission: 'staff.manage',
         icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+      },
+      {
+        href: '/staff-property-assignments',
+        label: 'Assignments',
+        permission: 'staff_property_assignments.view',
+        icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4',
       },
     ],
   },
   {
     group: 'Workspace',
     items: [
-      {
-        href: '/reports',
-        label: 'Reports',
-        icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-      },
+      // {
+      //   href: '/reports',
+      //   label: 'Reports',
+      //   permission: 'reports.view',
+      //   icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+      // },
       {
         href: '/subscription',
         label: 'Subscription',
+        permission: 'subscription.view',
         icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
       },
       {
         href: '/access-control',
         label: 'Access Control',
+        permission: 'roles.manage',
         icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
       },
       {
         href: '/settings',
         label: 'Settings',
+        permission: 'settings.view',
         icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z',
       },
     ],
@@ -121,15 +129,30 @@ export default function Sidebar({ open }) {
   const pathname = usePathname();
   const router = useRouter();
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const permissions = useAuthStore((s) => s.permissions);
 
   const isActive = (href) =>
-    href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
+    href === '/dashboard'
+      ? pathname === '/dashboard'
+      : pathname === href || pathname.startsWith(`${href}/`);
 
   const handleLogout = useCallback(async () => {
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => { });
     clearAuth();
     router.push('/login');
   }, [clearAuth, router]);
+
+  /* Filter nav groups based on permissions */
+  const hasPermission = useCallback((name) => {
+    return permissions.some((p) => p.name === name);
+  }, [permissions]);
+
+  const visibleGroups = useMemo(() => {
+    return NAV_GROUPS.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.permission || hasPermission(item.permission)),
+    })).filter((section) => section.items.length > 0);
+  }, [hasPermission]);
 
   return (
     <aside
@@ -159,7 +182,7 @@ export default function Sidebar({ open }) {
 
       {/* Scrollable nav */}
       <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-hide py-3">
-        {NAV_GROUPS.map((section) => (
+        {visibleGroups.map((section) => (
           <div key={section.group} className="mb-4">
             {open && (
               <p className="px-5 mb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">

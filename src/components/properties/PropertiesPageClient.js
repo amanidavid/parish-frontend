@@ -5,8 +5,14 @@ import PropertyService from '@/services/PropertyService';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import useCan from '@/hooks/useCan';
 
 const PER_PAGE = 15;
+
+function capitalize(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
 
 function SkeletonRow() {
   return (
@@ -31,6 +37,10 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const searchRef = useRef(null);
+
+  const canCreate = useCan('properties.create');
+  const canEdit = useCan('properties.edit');
+  const canDelete = useCan('properties.delete');
   const hydratedInitialRef = useRef(Boolean(initialMeta) && !initialError);
 
   const fetchProperties = useCallback(async () => {
@@ -104,12 +114,14 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
           <h1 className="text-xl font-bold text-gray-900">Properties</h1>
           <p className="text-sm text-gray-400 mt-0.5">Manage all registered properties</p>
         </div>
-        <Link href="/properties/create" className="btn-primary">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New Property
-        </Link>
+        {canCreate && (
+          <Link href="/properties/create" className="btn-primary">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Property
+          </Link>
+        )}
       </div>
 
       <form onSubmit={handleSearch} className="flex items-center gap-2">
@@ -215,7 +227,7 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
                       {prop.type?.name || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-5 py-3.5 text-gray-500 text-sm">
-                      {prop.location?.district?.name || prop.address_line || <span className="text-gray-300">—</span>}
+                      {capitalize(prop.location?.ward?.name) || capitalize(prop.location?.district?.name) || prop.address_line || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <span className="inline-flex items-center justify-center min-w-[28px] h-6 rounded bg-gray-100 text-gray-600 text-xs font-semibold px-2">
@@ -238,18 +250,22 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
                         >
                           View
                         </Link>
-                        <Link
-                          href={`/properties/${prop.uuid}/edit`}
-                          className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          onClick={() => setDeleteTarget(prop)}
-                          className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          Delete
-                        </button>
+                        {canEdit && (
+                          <Link
+                            href={`/properties/${prop.uuid}/edit`}
+                            className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                          >
+                            Edit
+                          </Link>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => setDeleteTarget(prop)}
+                            className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

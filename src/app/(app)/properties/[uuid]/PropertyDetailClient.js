@@ -1,27 +1,22 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PropertyService from '@/services/PropertyService';
 import StatusBadge from '@/components/ui/StatusBadge';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import {
+  PROPERTY_TABS,
+  sanitizeTab,
+  FloorsTab,
+  UnitsTab,
+  ContractsTab,
+} from '@/modules/properties/propertiesModule';
 
-/*
- * Tab components are code-split via dynamic() — JS loads on first tab open.
- * After first open, components STAY MOUNTED (CSS hidden) so state is preserved
- * and no re-fetch occurs on subsequent tab switches.
- */
-const FloorsTab = dynamic(() => import('@/components/properties/FloorsTab'));
-const UnitsTab = dynamic(() => import('@/components/properties/UnitsTab'));
-const ContractsTab = dynamic(() => import('@/components/properties/ContractsTab'));
-
-const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'floors', label: 'Floors' },
-  { id: 'units', label: 'Units' },
-  { id: 'contracts', label: 'Contracts' },
-];
+function capitalize(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
 
 function SummaryCell({ label, value, large, color }) {
   return (
@@ -60,8 +55,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlTab = searchParams.get('tab') || '';
-  const validTabs = TABS.map((t) => t.id);
-  const initialTab = validTabs.includes(urlTab) ? urlTab : 'overview';
+  const initialTab = sanitizeTab(urlTab);
 
   const [property, setProperty] = useState(initialProperty);
   const [loading, setLoading] = useState(!initialProperty && !initialError);
@@ -211,10 +205,11 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
             <button className="btn-danger text-sm" onClick={() => setDeleteOpen(true)} disabled={deleting}>Delete</button>
           </div>
         </div>
-        <div className="border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 divide-x-0 sm:divide-x divide-gray-100">
+        <div className="border-t border-gray-100 grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 divide-x-0 sm:divide-x divide-gray-100">
           <SummaryCell label="Country" value={property?.location?.country?.name ?? null} />
-          <SummaryCell label="Region" value={property?.location?.region?.name ?? null} />
-          <SummaryCell label="District" value={property?.location?.district?.name ?? null} />
+          <SummaryCell label="Region" value={capitalize(property?.location?.region?.name) ?? null} />
+          <SummaryCell label="District" value={capitalize(property?.location?.district?.name) ?? null} />
+          <SummaryCell label="Ward" value={capitalize(property?.location?.ward?.name) ?? null} />
           <SummaryCell label="Address" value={property?.address_line ?? null} />
         </div>
       </div>
@@ -222,7 +217,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
       {/* Tab bar */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex gap-0">
-          {TABS.map((t) => (
+          {PROPERTY_TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => handleTabChange(t.id)}
@@ -237,7 +232,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
       {/* ── Overview (inline, no component) ── */}
       {tab === 'overview' && (
         <div className="space-y-4">
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          {/* <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-6 py-3.5 border-b border-gray-100">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Property Details</p>
             </div>
@@ -259,7 +254,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
                 <p className="text-sm font-semibold text-gray-900">{property?.address_line || <span className="text-gray-300">—</span>}</p>
               </div>
             </div>
-          </div>
+          </div> */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <SummaryCell label="Floors" value={property?.floors_count} large color="#2563eb" />

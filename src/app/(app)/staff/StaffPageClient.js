@@ -4,6 +4,7 @@ import Link from 'next/link';
 import StaffService from '@/services/StaffService';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import useCan from '@/hooks/useCan';
 
 const PER_PAGE = 15;
 
@@ -52,6 +53,8 @@ export default function StaffPageClient({ initialItems = [], initialMeta = null,
   const [deleting, setDeleting] = useState(false);
   const searchRef = useRef(null);
   const hydratedInitialRef = useRef(Boolean(initialMeta) && !initialError);
+
+  const canManage = useCan('staff.manage');
 
   const fetchStaff = useCallback(async () => {
     setLoading(true);
@@ -123,7 +126,7 @@ export default function StaffPageClient({ initialItems = [], initialMeta = null,
           <h1 className="text-base font-bold text-gray-900">Staff</h1>
           <p className="text-sm text-gray-400 mt-0.5">Manage workspace staff and their roles</p>
         </div>
-        <Link href="/staff/create" className="btn-primary text-sm">New Staff</Link>
+        {canManage && <Link href="/staff/create" className="btn-primary text-sm">New Staff</Link>}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -191,8 +194,8 @@ export default function StaffPageClient({ initialItems = [], initialMeta = null,
                 </td>
                 <td className="px-5 py-3.5 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Link href={`/staff/${member.uuid}/edit`} className={BTN.gray}>Edit</Link>
-                    <button className={BTN.red} onClick={() => setDeleteTarget(member)}>Delete</button>
+                    {canManage && <Link href={`/staff/${member.uuid}/edit`} className={BTN.gray}>Edit</Link>}
+                    {canManage && <button className={BTN.red} onClick={() => setDeleteTarget(member)}>Delete</button>}
                   </div>
                 </td>
               </tr>

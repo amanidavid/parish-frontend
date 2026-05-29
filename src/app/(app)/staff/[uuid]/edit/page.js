@@ -28,6 +28,8 @@ export default function EditStaffPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!uuid) return;
+
     StaffService.show(uuid)
       .then((data) => {
         if (data?.success && data?.data) {
@@ -59,6 +61,23 @@ export default function EditStaffPage() {
     }
   };
 
+  if (!uuid) {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <h1 className="text-base font-bold text-gray-900">Edit Staff</h1>
+          <Link href="/staff" className="btn-secondary text-sm">Back to Staff</Link>
+        </div>
+        <div className="flex items-start gap-3 rounded-md bg-red-50 border border-red-200 px-4 py-3">
+          <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-red-700">Staff member identifier is missing.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (fetching) {
     return (
       <div className="space-y-5">
@@ -68,15 +87,8 @@ export default function EditStaffPage() {
             <div className="h-4 bg-gray-100 rounded animate-pulse w-56 mt-1.5" />
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg p-6">
-            <Skeleton />
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-4 bg-gray-100 rounded animate-pulse" style={{ width: `${70 - i * 10}%` }} />
-            ))}
-          </div>
+        <div className="bg-white border border-gray-200 rounded-md p-6">
+          <Skeleton />
         </div>
       </div>
     );
@@ -99,6 +111,23 @@ export default function EditStaffPage() {
     );
   }
 
+  if (!member) {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <h1 className="text-base font-bold text-gray-900">Edit Staff</h1>
+          <Link href="/staff" className="btn-secondary text-sm">Back to Staff</Link>
+        </div>
+        <div className="flex items-start gap-3 rounded-md bg-red-50 border border-red-200 px-4 py-3">
+          <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-red-700">Staff details could not be resolved for editing.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -114,56 +143,23 @@ export default function EditStaffPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg p-6">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">Staff Information</p>
-
-          {error && (
-            <div className="mb-5 flex items-start gap-3 rounded-md bg-red-50 border border-red-200 px-4 py-3">
-              <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-
-          <StaffForm
-            initial={member}
-            onSubmit={handleSubmit}
-            loading={loading}
-            submitLabel="Save Changes"
-          />
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Current Details</p>
-          <div className="space-y-3">
-            {[
-              { label: 'Name', value: member?.name },
-              { label: 'Username', value: member?.base_user?.username },
-              { label: 'Status', value: member?.status },
-              { label: 'Email', value: member?.email },
-              { label: 'Phone', value: member?.phone },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-xs font-medium text-gray-400">{label}</p>
-                <p className="text-sm font-medium text-gray-800">{value || <span className="text-gray-300">—</span>}</p>
-              </div>
-            ))}
-            {member?.roles && member.roles.length > 0 && (
-              <div className="border-t border-gray-100 pt-3">
-                <p className="text-xs font-semibold text-gray-400 mb-2">Roles</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {member.roles.map((r) => (
-                    <span key={r.id} className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-medium">
-                      {r.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+      <div className="bg-white border border-gray-200 rounded-md p-6">
+        {error && (
+          <div className="mb-5 flex items-start gap-3 rounded-md bg-red-50 border border-red-200 px-4 py-3">
+            <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-red-700">{error}</p>
           </div>
-        </div>
+        )}
+
+        <StaffForm
+          key={[member.uuid, member.name, member.phone, member.base_user?.username, member.status].join(':')}
+          initial={member}
+          onSubmit={handleSubmit}
+          loading={loading}
+          submitLabel="Save Changes"
+        />
       </div>
     </div>
   );

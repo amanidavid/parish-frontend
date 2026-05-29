@@ -23,7 +23,7 @@ export async function GET() {
           httpOnly: true,
           sameSite: 'lax',
           path: '/',
-          maxAge: refreshedJson?.data?.expires_in ?? 900,
+          maxAge: refreshedJson?.data?.expires_in ?? 3900,
           secure: process.env.NODE_ENV === 'production',
         });
         const retry = await fetch(`${process.env.API_BASE_URL}/v1/auth/me`, {

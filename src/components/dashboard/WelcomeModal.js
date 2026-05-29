@@ -1,11 +1,13 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PropertyService from '@/services/PropertyService';
 import LocationService from '@/services/LocationService';
 import apiFetch from '@/lib/apiFetch';
-import { COUNTRY_CODES } from '@/constants/countryCodes';
 
-const TANZANIA_ISO2 = 'TZ';
+function capitalize(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
 
 function Spinner() {
   return (
@@ -30,16 +32,21 @@ function Field({ label, required, hint, error, children }) {
 }
 
 export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
-  const [form, setForm] = useState({ name: '', type_uuid: '', address_line: '', region_uuid: '', district_uuid: '' });
-  const [countryIso2, setCountryIso2] = useState(TANZANIA_ISO2);
-  const isTanzania = countryIso2 === TANZANIA_ISO2;
+  const [form, setForm] = useState({ name: '', type_uuid: '', address_line: '', country_uuid: '', region_uuid: '', district_uuid: '', ward_uuid: '' });
 
   const [propertyTypes, setPropertyTypes] = useState([]);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [countryResults, setCountryResults] = useState([]);
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
+  const countrySearchRef = useRef(null);
   const [regions, setRegions] = useState([]);
   const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
   const [typesLoading, setTypesLoading] = useState(true);
   const [regionsLoading, setRegionsLoading] = useState(false);
   const [districtsLoading, setDistrictsLoading] = useState(false);
+  const [wardsLoading, setWardsLoading] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -53,14 +60,16 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
       .finally(() => setTypesLoading(false));
   }, [open]);
 
+  /* Debounced country search */
   useEffect(() => {
-    if (!open || !isTanzania) return;
-    setRegionsLoading(true);
-    LocationService.regions()
-      .then((d) => setRegions(d?.data || []))
-      .catch(() => { })
-      .finally(() => setRegionsLoading(false));
-  }, [open, isTanzania]);
+    if (!open || !countryDropdownOpen) return;
+    const timeout = setTimeout(() => {
+      LocationService.countries(countrySearch)
+        .then((d) => setCountryResults(Array.isArray(d?.data) ? d.data : []))
+        .catch(() => { setCountryResults([]); });
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [countrySearch, countryDropdownOpen, open]);
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -71,8 +80,9 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
 
   const handleRegionChange = useCallback((e) => {
     const regionUuid = e.target.value;
-    setForm((p) => ({ ...p, region_uuid: regionUuid, district_uuid: '' }));
+    setForm((p) => ({ ...p, region_uuid: regionUuid, district_uuid: '', ward_uuid: '' }));
     setDistricts([]);
+    setWards([]);
     if (!regionUuid) return;
     setDistrictsLoading(true);
     LocationService.districts(regionUuid)
@@ -81,17 +91,51 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
       .finally(() => setDistrictsLoading(false));
   }, []);
 
-  const handleCountryChange = useCallback((e) => {
-    setCountryIso2(e.target.value);
-    setForm((p) => ({ ...p, region_uuid: '', district_uuid: '', address_line: '' }));
+  const handleDistrictChange = useCallback((e) => {
+    const districtUuid = e.target.value;
+    setForm((p) => ({ ...p, district_uuid: districtUuid, ward_uuid: '' }));
+    setWards([]);
+    if (!districtUuid) return;
+    setWardsLoading(true);
+    LocationService.wards(districtUuid)
+      .then((d) => setWards(d?.data || []))
+      .catch(() => { })
+      .finally(() => setWardsLoading(false));
+  }, []);
+
+  const selectCountry = useCallback((country) => {
+    if (!country) {
+      setForm((p) => ({ ...p, country_uuid: '', region_uuid: '', district_uuid: '', ward_uuid: '' }));
+      setSelectedCountry(null);
+      setCountrySearch('');
+      setRegions([]);
+      setDistricts([]);
+      setWards([]);
+      return;
+    }
+    setForm((p) => ({ ...p, country_uuid: country.uuid, region_uuid: '', district_uuid: '', ward_uuid: '' }));
+    setSelectedCountry(country);
+    setCountrySearch(country.name);
+    setCountryDropdownOpen(false);
+    setRegions([]);
     setDistricts([]);
-    setErrors({});
+    setWards([]);
+    setErrors((prev) => ({ ...prev, country_uuid: null, region_uuid: null, district_uuid: null, ward_uuid: null }));
+    setRegionsLoading(true);
+    LocationService.regions(country.uuid)
+      .then((d) => setRegions(d?.data || []))
+      .catch(() => { })
+      .finally(() => setRegionsLoading(false));
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
       setErrors({ name: ['Property name is required'] });
+      return;
+    }
+    if (countrySearch.trim() && selectedCountry?.name !== countrySearch.trim()) {
+      setErrors({ country_uuid: ['Please select a country from the dropdown list'] });
       return;
     }
     setSaving(true);
@@ -101,11 +145,13 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
         name: form.name.trim(),
         type_uuid: form.type_uuid || null,
         status: 'active',
-        ...(isTanzania
-          ? { district_uuid: form.district_uuid || null }
-          : { address_line: form.address_line || null }
-        ),
+        country_uuid: form.country_uuid || null,
+        region_uuid: form.region_uuid || null,
+        district_uuid: form.district_uuid || null,
+        ward_uuid: form.ward_uuid || null,
+        address_line: form.address_line || null,
       };
+      console.log('[WelcomeModal] submit payload:', payload);
       const data = await PropertyService.store(payload);
       if (data?.success) {
         onCreated(data.data);
@@ -119,6 +165,17 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
       setSaving(false);
     }
   };
+
+  /* Close country dropdown on outside click */
+  useEffect(() => {
+    function onDocClick(e) {
+      if (countrySearchRef.current && !countrySearchRef.current.contains(e.target)) {
+        setCountryDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
 
   if (!open) return null;
 
@@ -166,38 +223,66 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
                 </select>
               </Field>
 
-              <Field label="Country" required hint="Location fields adjust based on country" error={errors?.country?.[0]}>
-                <select className="input" value={countryIso2} onChange={handleCountryChange}>
-                  {COUNTRY_CODES.map((c) => (
-                    <option key={c.iso2} value={c.iso2}>{c.flag} {c.name}</option>
-                  ))}
+              <Field label="Country" required error={errors?.country_uuid?.[0]}>
+                <div className="relative" ref={countrySearchRef}>
+                  <input
+                    type="text"
+                    className="input w-full"
+                    placeholder="Search country..."
+                    value={countrySearch}
+                    onChange={(e) => { setCountrySearch(e.target.value); setCountryDropdownOpen(true); }}
+                    onFocus={() => setCountryDropdownOpen(true)}
+                    autoComplete="off"
+                  />
+                  {countryDropdownOpen && (
+                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto mt-1 text-sm">
+                      {countryResults.length === 0 ? (
+                        <li className="px-3 py-2 text-gray-400">No results</li>
+                      ) : (
+                        countryResults.map((c) => (
+                          <li
+                            key={c.uuid}
+                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => selectCountry(c)}
+                          >
+                            {c.name}
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  )}
+                </div>
+              </Field>
+
+              <Field label="Region" error={errors?.region_uuid?.[0]}>
+                <select name="region_uuid" className="input" value={form.region_uuid}
+                  onChange={handleRegionChange} disabled={!form.country_uuid || regionsLoading}>
+                  <option value="">{!form.country_uuid ? 'Select country first' : regionsLoading ? 'Loading...' : 'Select region (optional)'}</option>
+                  {regions.map((r) => <option key={r.uuid} value={r.uuid}>{capitalize(r.name)}</option>)}
                 </select>
               </Field>
 
-              {isTanzania ? (
-                <>
-                  <Field label="Region" error={errors?.region_uuid?.[0]}>
-                    <select name="region_uuid" className="input" value={form.region_uuid}
-                      onChange={handleRegionChange} disabled={regionsLoading}>
-                      <option value="">{regionsLoading ? 'Loading...' : 'Select region (optional)'}</option>
-                      {regions.map((r) => <option key={r.uuid} value={r.uuid}>{r.name}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="District" error={errors?.district_uuid?.[0]} hint="Country and region are derived from the selected district when the property is saved.">
-                    <select name="district_uuid" className="input" value={form.district_uuid}
-                      onChange={handleChange} disabled={!form.region_uuid || districtsLoading}>
-                      <option value="">{!form.region_uuid ? 'Select region first' : districtsLoading ? 'Loading...' : 'Select district (optional)'}</option>
-                      {districts.map((d) => <option key={d.uuid} value={d.uuid}>{d.name}</option>)}
-                    </select>
-                  </Field>
-                </>
-              ) : (
-                <Field label="Location" error={errors?.address_line?.[0]} hint="Street address or area">
-                  <input name="address_line" type="text" className="input"
-                    placeholder="e.g. 123 Main Street"
-                    value={form.address_line} onChange={handleChange} />
-                </Field>
-              )}
+              <Field label="District" error={errors?.district_uuid?.[0]} hint="Country and region are derived from the selected district when the property is saved.">
+                <select name="district_uuid" className="input" value={form.district_uuid}
+                  onChange={handleDistrictChange} disabled={!form.region_uuid || districtsLoading}>
+                  <option value="">{!form.region_uuid ? 'Select region first' : districtsLoading ? 'Loading...' : 'Select district (optional)'}</option>
+                  {districts.map((d) => <option key={d.uuid} value={d.uuid}>{capitalize(d.name)}</option>)}
+                </select>
+              </Field>
+
+              <Field label="Ward" error={errors?.ward_uuid?.[0]} hint="Neighbourhood / sub-district area">
+                <select name="ward_uuid" className="input" value={form.ward_uuid}
+                  onChange={handleChange} disabled={!form.district_uuid || wardsLoading}>
+                  <option value="">{!form.district_uuid ? 'Select district first' : wardsLoading ? 'Loading...' : 'Select ward (optional)'}</option>
+                  {wards.map((w) => <option key={w.uuid} value={w.uuid}>{capitalize(w.name)}</option>)}
+                </select>
+              </Field>
+
+              <Field label="Address / Location" error={errors?.address_line?.[0]} hint="Street address or area">
+                <input name="address_line" type="text" className="input"
+                  placeholder="e.g. 123 Main Street"
+                  value={form.address_line} onChange={handleChange} />
+              </Field>
             </div>
           </div>
 

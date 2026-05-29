@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import StaffService from '@/services/StaffService';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import useCan from '@/hooks/useCan';
 
 const STAFF_STATUS = {
   active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
@@ -41,6 +42,7 @@ export default function StaffDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [notification, setNotification] = useState(null);
+  const canManage = useCan('staff.manage');
 
   useEffect(() => {
     StaffService.show(uuid)
@@ -144,10 +146,12 @@ export default function StaffDetailPage() {
               <p className="text-sm text-gray-500 font-mono">@{member?.base_user?.username || '—'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href={`/staff/${uuid}/edit`} className="btn-secondary text-sm">Edit</Link>
-            <button onClick={() => setDeleteOpen(true)} className="btn-danger text-sm">Delete</button>
-          </div>
+          {canManage && (
+            <div className="flex items-center gap-2">
+              <Link href={`/staff/${uuid}/edit`} className="btn-secondary text-sm">Edit</Link>
+              <button onClick={() => setDeleteOpen(true)} className="btn-danger text-sm">Delete</button>
+            </div>
+          )}
         </div>
         <div className="border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100">
           {[
@@ -167,7 +171,7 @@ export default function StaffDetailPage() {
       </div>
 
       {/* Overview */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      {/* <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Staff Details</p>
         </div>
@@ -186,7 +190,7 @@ export default function StaffDetailPage() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
       <ConfirmModal
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}

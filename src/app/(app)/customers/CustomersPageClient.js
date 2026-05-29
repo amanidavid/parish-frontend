@@ -4,6 +4,7 @@ import Link from 'next/link';
 import CustomerService from '@/services/CustomerService';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import useCan from '@/hooks/useCan';
 
 const PER_PAGE = 50;
 
@@ -51,6 +52,10 @@ export default function CustomersPageClient({ initialItems = [], initialMeta = n
   const [deleting, setDeleting] = useState(false);
   const searchRef = useRef(null);
   const hydratedInitialRef = useRef(Boolean(initialMeta) && !initialError);
+
+  const canCreate = useCan('customers.create');
+  const canEdit = useCan('customers.edit');
+  const canDelete = useCan('customers.delete');
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -124,7 +129,7 @@ export default function CustomersPageClient({ initialItems = [], initialMeta = n
           <h1 className="text-base font-bold text-gray-900">Customers</h1>
           <p className="text-sm text-gray-400 mt-0.5">Manage tenants and business clients</p>
         </div>
-        <Link href="/customers/create" className="btn-primary text-sm">New Customer</Link>
+        {canCreate && <Link href="/customers/create" className="btn-primary text-sm">New Customer</Link>}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -206,8 +211,8 @@ export default function CustomersPageClient({ initialItems = [], initialMeta = n
                   <td className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Link href={`/customers/${customer.uuid}`} className={BTN.blue}>View</Link>
-                      <Link href={`/customers/${customer.uuid}/edit`} className={BTN.gray}>Edit</Link>
-                      <button className={BTN.red} onClick={() => setDeleteTarget(customer)}>Delete</button>
+                      {canEdit && <Link href={`/customers/${customer.uuid}/edit`} className={BTN.gray}>Edit</Link>}
+                      {canDelete && <button className={BTN.red} onClick={() => setDeleteTarget(customer)}>Delete</button>}
                     </div>
                   </td>
                 </tr>
