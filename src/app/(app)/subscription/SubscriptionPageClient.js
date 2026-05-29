@@ -371,7 +371,7 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
 
         <div className="data-table-wrap">
           <div className="overflow-x-auto scrollbar-hide">
-            <table className="data-table">
+            <table className="data-table min-w-[640px]">
               <thead>
                 <tr>
                   <th style={{ width: '2.5rem' }}>#</th>

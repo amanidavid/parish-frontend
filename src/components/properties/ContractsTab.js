@@ -719,7 +719,7 @@ export default function ContractsTab({ propertyUuid }) {
           </div>
         ) : (
           <>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-10">#</th>
@@ -761,7 +761,7 @@ export default function ContractsTab({ propertyUuid }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
             {meta && <Pagination meta={meta} onPageChange={setPage} />}
           </>
         )}

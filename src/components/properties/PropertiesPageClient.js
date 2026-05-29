@@ -172,7 +172,7 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">

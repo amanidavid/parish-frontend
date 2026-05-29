@@ -152,7 +152,7 @@ export default function CustomersPageClient({ initialItems = [], initialMeta = n
       <div className="data-table-wrap">
         {error && <div className="m-4 text-sm text-red-700">{error}</div>}
         <div className="overflow-x-auto no-scrollbar">
-          <table className="data-table">
+          <table className="data-table min-w-[640px]">
             <thead>
               <tr>
                 <th>Name</th>
