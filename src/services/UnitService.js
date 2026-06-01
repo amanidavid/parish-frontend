@@ -7,7 +7,6 @@ const UnitService = {
     const query = new URLSearchParams({
       property_uuid: propertyUuid,
       per_page: params.perPage || 15,
-      sort: 'unit_number',
     });
     if (params.search) query.set('search', params.search);
     if (params.page && params.page > 1) query.set('page', params.page);
@@ -20,7 +19,6 @@ const UnitService = {
     const query = new URLSearchParams({
       property_floor_uuid: floorUuid,
       per_page: params.perPage || 15,
-      sort: 'unit_number',
     });
     if (params.search) query.set('search', params.search);
     if (params.page && params.page > 1) query.set('page', params.page);
@@ -30,7 +28,7 @@ const UnitService = {
   },
 
   async listAllByProperty(propertyUuid) {
-    return apiFetch(`${BASE}?property_uuid=${propertyUuid}&per_page=100&sort=unit_number`);
+    return apiFetch(`${BASE}?property_uuid=${propertyUuid}&per_page=100`);
   },
 
   async store(data) {

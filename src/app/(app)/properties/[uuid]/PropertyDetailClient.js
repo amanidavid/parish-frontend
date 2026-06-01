@@ -205,13 +205,34 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
             <button className="btn-danger text-sm" onClick={() => setDeleteOpen(true)} disabled={deleting}>Delete</button>
           </div>
         </div>
-        <div className="border-t border-gray-100 grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 divide-x-0 sm:divide-x divide-gray-100">
-          <SummaryCell label="Country" value={property?.location?.country?.name ?? null} />
-          <SummaryCell label="Region" value={capitalize(property?.location?.region?.name) ?? null} />
-          <SummaryCell label="District" value={capitalize(property?.location?.district?.name) ?? null} />
-          <SummaryCell label="Ward" value={capitalize(property?.location?.ward?.name) ?? null} />
-          <SummaryCell label="Address" value={property?.address_line ?? null} />
-        </div>
+        {(() => {
+          const items = [
+            { label: 'Country', value: property?.location?.country?.name },
+            { label: 'Region', value: capitalize(property?.location?.region?.name) },
+            { label: 'District', value: capitalize(property?.location?.district?.name) },
+            { label: 'Ward', value: capitalize(property?.location?.ward?.name) },
+            { label: 'Address', value: property?.address_line },
+          ].filter((item) => item.value && String(item.value).trim() !== '');
+
+          const gridClass = {
+            1: 'grid-cols-1',
+            2: 'grid-cols-2',
+            3: 'grid-cols-3',
+            4: 'grid-cols-2 sm:grid-cols-4',
+            5: 'grid-cols-2 sm:grid-cols-5',
+          }[items.length] || 'grid-cols-2 sm:grid-cols-5';
+
+          return items.length > 0 ? (
+            <div className={`border-t border-gray-100 grid ${gridClass}`}>
+              {items.map((item, i) => (
+                <div key={item.label} className={`px-6 py-4 ${i > 0 ? 'border-l border-gray-100' : ''}`}>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{item.label}</p>
+                  <p className="text-sm font-medium text-gray-700">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          ) : null;
+        })()}
       </div>
 
       {/* Tab bar */}
