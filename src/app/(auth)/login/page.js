@@ -16,7 +16,8 @@ function Spinner() {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ phone: '', password: '' });
+  const [mode, setMode] = useState('phone');
+  const [form, setForm] = useState({ phone: '', email: '', password: '' });
   const [country, setCountry] = useState(DEFAULT_COUNTRY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -39,11 +40,16 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     setFieldErrors({});
+
+    const payload = mode === 'phone'
+      ? { phone: form.phone, country_code: country.dialCode, password: form.password }
+      : { email: form.email, password: form.password };
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: form.phone, country_code: country.dialCode, password: form.password }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -81,21 +87,77 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div>
-          <label className="label" htmlFor="phone">Phone Number</label>
-          <div className="flex">
-            <CountryCodePicker value={country.iso2} onChange={handleCountryChange} disabled={loading} />
-            <input
-              id="phone" name="phone" type="tel"
-              className="input rounded-l-none border-l-0 flex-1"
-              placeholder="712 345 678"
-              value={form.phone}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          {fieldErrors?.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors.phone[0]}</p>}
+        {/* Mode toggle */}
+        <div className="bg-gray-50 rounded-xl p-1 flex gap-1">
+          <button
+            type="button"
+            onClick={() => setMode('phone')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'phone'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            Phone
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('email')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'email'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+              }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            Email
+          </button>
         </div>
+
+        {mode === 'phone' ? (
+          <div>
+            <label className="label" htmlFor="phone">Phone Number</label>
+            <div className="flex">
+              <CountryCodePicker value={country.iso2} onChange={handleCountryChange} disabled={loading} />
+              <input
+                id="phone" name="phone" type="tel"
+                className="input rounded-l-none border-l-0 flex-1"
+                placeholder="712 345 678"
+                value={form.phone}
+                onChange={handleChange}
+                required={mode === 'phone'}
+              />
+            </div>
+            {fieldErrors?.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors.phone[0]}</p>}
+          </div>
+        ) : (
+          <div>
+            <label className="label" htmlFor="email">Email</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </span>
+              <input
+                id="email" name="email" type="email"
+                className="input pl-10"
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={handleChange}
+                autoComplete="email"
+                required={mode === 'email'}
+              />
+            </div>
+            {fieldErrors?.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email[0]}</p>}
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-1">
