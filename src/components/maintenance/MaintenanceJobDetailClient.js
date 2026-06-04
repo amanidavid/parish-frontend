@@ -5,6 +5,7 @@ import MaintenanceService from '@/services/MaintenanceService';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import Pagination from '@/components/ui/Pagination';
+import useConfirmModal from '@/hooks/useConfirmModal';
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -36,7 +37,7 @@ export default function MaintenanceJobDetailClient({ uuid }) {
   const [form, setForm] = useState(EMPTY_EXPENSE);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [confirm, setConfirm] = useState({ open: false, expense: null });
+  const confirmModal = useConfirmModal();
 
   // ── Load job ──
   useEffect(() => {
@@ -108,13 +109,14 @@ export default function MaintenanceJobDetailClient({ uuid }) {
   }, [form, modal, uuid, expensesPage, loadExpenses]);
 
   const handleDelete = useCallback(async () => {
-    if (!confirm.expense) return;
-    setSubmitting(true);
-    await MaintenanceService.expensesDestroy(confirm.expense.uuid);
-    setSubmitting(false);
-    setConfirm({ open: false, expense: null });
-    loadExpenses(expensesPage);
-  }, [confirm.expense, expensesPage, loadExpenses]);
+    const res = await confirmModal.execute(
+      (expense) => MaintenanceService.expensesDestroy(expense.uuid, { showLoader: false }),
+      { successMessage: 'Expense deleted successfully.', errorMessage: 'Failed to delete expense.' }
+    );
+    if (res?.success) {
+      loadExpenses(expensesPage);
+    }
+  }, [confirmModal, expensesPage, loadExpenses]);
 
   const handlePage = useCallback((pg) => {
     setExpensesPage(pg);
@@ -205,7 +207,7 @@ export default function MaintenanceJobDetailClient({ uuid }) {
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => openEdit(ex)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">Edit</button>
-                      <button onClick={() => setConfirm({ open: true, expense: ex })} className="text-xs font-medium px-2.5 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button>
+                      <button onClick={() => confirmModal.prompt(ex)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -252,15 +254,17 @@ export default function MaintenanceJobDetailClient({ uuid }) {
         </form>
       </Modal>
 
-      {/* Confirm delete */}
       <ConfirmModal
-        open={confirm.open}
-        onClose={() => setConfirm({ open: false, expense: null })}
+        open={confirmModal.open}
+        onClose={confirmModal.close}
         onConfirm={handleDelete}
+        onRetry={handleDelete}
         title="Delete Expense"
-        message={`Delete "${confirm.expense?.title}"?`}
+        message={`Delete "${confirmModal.item?.title}"?`}
         confirmLabel="Delete"
-        loading={submitting}
+        danger
+        loading={confirmModal.loading}
+        result={confirmModal.result}
       />
     </div>
   );

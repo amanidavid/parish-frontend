@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import CustomerForm from '@/components/customers/CustomerForm';
 import CustomerService from '@/services/CustomerService';
+import useUiStore from '@/store/uiStore';
 
 function Skeleton() {
   return (
@@ -23,9 +24,7 @@ export default function EditCustomerPage() {
   const router = useRouter();
   const [customer, setCustomer] = useState(null);
   const [fetching, setFetching] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     CustomerService.show(uuid)
@@ -33,29 +32,32 @@ export default function EditCustomerPage() {
         if (data?.success && data?.data) {
           setCustomer(data.data);
         } else {
-          setFetchError(data?.message || 'Failed to load customer details');
+          useUiStore.getState().showModal({ type: 'error', message: data?.message || 'Failed to load customer details' });
         }
       })
-      .catch(() => setFetchError('Network error'))
+      .catch(() => useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' }))
       .finally(() => setFetching(false));
   }, [uuid]);
 
   const handleSubmit = async (form) => {
     setLoading(true);
-    setError(null);
-
     try {
       const data = await CustomerService.update(uuid, form);
-
       if (data?.success) {
-        router.push(`/customers/${uuid}`);
+        useUiStore.getState().showModal({
+          type: 'success',
+          message: data?.message || 'Customer updated successfully.',
+          onRefresh: () => router.push(`/customers/${uuid}`),
+        });
         return {};
       }
-
-      setError(data?.message);
+      useUiStore.getState().showModal({
+        type: 'error',
+        message: data?.message || 'Failed to update customer.',
+      });
       return { errors: data?.errors || {} };
     } catch {
-      setError('Network error');
+      useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' });
       return {};
     } finally {
       setLoading(false);
@@ -78,18 +80,12 @@ export default function EditCustomerPage() {
     );
   }
 
-  if (fetchError) {
+  if (!customer) {
     return (
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <h1 className="text-base font-bold text-gray-900">Edit Customer</h1>
           <Link href="/customers" className="btn-secondary text-sm">Back to Customers</Link>
-        </div>
-        <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3">
-          <svg className="mt-0.5 h-4 w-4 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm text-red-700">{fetchError}</p>
         </div>
       </div>
     );
@@ -112,15 +108,6 @@ export default function EditCustomerPage() {
 
       <div className="rounded-lg border border-gray-200 bg-white p-6">
         <p className="mb-5 text-xs font-semibold uppercase tracking-widest text-gray-400">Customer Information</p>
-
-        {error && (
-          <div className="mb-5 flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3">
-            <svg className="mt-0.5 h-4 w-4 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
 
         <CustomerForm
           initial={customer}

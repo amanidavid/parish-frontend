@@ -40,8 +40,8 @@ const AccessControlService = {
     });
   },
 
-  async deleteRole(roleId) {
-    return apiFetch(`${BASE}/roles/${roleId}`, { method: 'DELETE' });
+  async deleteRole(roleId, options = {}) {
+    return apiFetch(`${BASE}/roles/${roleId}`, { method: 'DELETE', ...options });
   },
 
   async syncRolePermissions(roleId, permissionIds) {

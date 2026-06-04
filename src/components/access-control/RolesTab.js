@@ -2,74 +2,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import AccessControlService from '@/services/AccessControlService';
 import RolePermissionsModal from './RolePermissionsModal';
-
-/* Toast Banner */
-function Toast({ message, type, onClose }) {
-  if (!message) return null;
-  const bg = type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200';
-  return (
-    <div className={`rounded-lg border px-4 py-3 text-sm flex items-center justify-between ${bg}`}>
-      <span className="font-medium">{message}</span>
-      <button onClick={onClose} className="ml-4 opacity-70 hover:opacity-100">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-      </button>
-    </div>
-  );
-}
-
-/* Delete Role Modal */
-function DeleteRoleModal({ role, onClose, onDeleted, onShowToast }) {
-  const [deleting, setDeleting] = useState(false);
-  const [modalError, setModalError] = useState(null);
-
-  const handleConfirm = async () => {
-    setDeleting(true);
-    setModalError(null);
-    try {
-      const res = await AccessControlService.deleteRole(role.id);
-      if (res?.success) {
-        onShowToast?.(res?.message || 'Role deleted successfully.', 'success');
-        onDeleted?.();
-        onClose();
-      } else {
-        setModalError(res?.message || 'Failed to delete role');
-      }
-    } catch {
-      setModalError('Network error');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900">Delete Role</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <div className="px-6 py-4 space-y-4">
-          {modalError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{modalError}</p>}
-          <p className="text-sm text-gray-700">
-            Are you sure you want to delete <span className="font-semibold text-gray-900">{role.name}</span>? This cannot be undone.
-          </p>
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button onClick={onClose} disabled={deleting} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50">Cancel</button>
-            <button onClick={handleConfirm} disabled={deleting} className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:bg-red-300 transition-colors">
-              {deleting ? 'Deleting...' : 'Delete'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 /* Create Role Modal */
-function CreateRoleModal({ onClose, onCreated, onShowToast }) {
+function CreateRoleModal({ onClose, onCreated }) {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState(null);
@@ -81,7 +17,6 @@ function CreateRoleModal({ onClose, onCreated, onShowToast }) {
     try {
       const res = await AccessControlService.createRole(name.trim());
       if (res?.success) {
-        onShowToast?.(res?.message || 'Role created successfully.', 'success');
         onCreated?.();
         onClose();
       } else {
@@ -139,11 +74,42 @@ export default function RolesTab() {
   const [activeRole, setActiveRole] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deletingRole, setDeletingRole] = useState(null);
-  const [toast, setToast] = useState(null);
 
-  const showToast = useCallback((message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+  // ConfirmModal 3-state for delete
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmResult, setConfirmResult] = useState(null);
+
+  const promptDelete = useCallback((role) => {
+    setDeletingRole(role);
+    setConfirmResult(null);
+    setConfirmLoading(false);
+    setConfirmOpen(true);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deletingRole) return;
+    setConfirmLoading(true);
+    setConfirmResult(null);
+    try {
+      const res = await AccessControlService.deleteRole(deletingRole.id, { showLoader: false });
+      if (res?.success) {
+        setConfirmResult({ type: 'success', message: res?.message || 'Role deleted successfully.' });
+        fetchRoles();
+      } else {
+        setConfirmResult({ type: 'error', message: res?.message || 'Failed to delete role.' });
+      }
+    } catch {
+      setConfirmResult({ type: 'error', message: 'Network error. Please try again.' });
+    } finally {
+      setConfirmLoading(false);
+    }
+  }, [deletingRole, fetchRoles]);
+
+  const handleCloseConfirm = useCallback(() => {
+    setConfirmOpen(false);
+    setConfirmResult(null);
+    setDeletingRole(null);
   }, []);
 
   const fetchRoles = useCallback(async () => {
@@ -172,10 +138,6 @@ export default function RolesTab() {
 
   return (
     <div className="space-y-4">
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-      )}
-
       {/* Toolbar */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
@@ -246,7 +208,7 @@ export default function RolesTab() {
                         Manage
                       </button>
                       <button
-                        onClick={() => setDeletingRole(role)}
+                        onClick={() => promptDelete(role)}
                         className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline"
                         title="Delete role"
                       >
@@ -273,18 +235,21 @@ export default function RolesTab() {
         <CreateRoleModal
           onClose={() => setShowCreate(false)}
           onCreated={fetchRoles}
-          onShowToast={showToast}
         />
       )}
 
-      {deletingRole && (
-        <DeleteRoleModal
-          role={deletingRole}
-          onClose={() => setDeletingRole(null)}
-          onDeleted={fetchRoles}
-          onShowToast={showToast}
-        />
-      )}
+      <ConfirmModal
+        open={confirmOpen}
+        onClose={handleCloseConfirm}
+        onConfirm={handleDeleteConfirm}
+        onRetry={handleDeleteConfirm}
+        title="Delete Role"
+        message={deletingRole ? `Are you sure you want to delete "${deletingRole.name}"? This cannot be undone.` : ''}
+        confirmLabel="Delete"
+        danger
+        loading={confirmLoading}
+        result={confirmResult}
+      />
     </div>
   );
 }

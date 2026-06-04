@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PropertyService from '@/services/PropertyService';
 import PropertyForm from '@/components/properties/PropertyForm';
+import useUiStore from '@/store/uiStore';
 
 export default function EditPropertyPage() {
   const { uuid } = useParams();
@@ -11,7 +12,6 @@ export default function EditPropertyPage() {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     PropertyService.show(uuid)
@@ -19,26 +19,32 @@ export default function EditPropertyPage() {
         if (data?.success && data?.data) {
           setProperty(data.data);
         } else {
-          setError(data?.message || 'Failed to load property details');
+          useUiStore.getState().showModal({ type: 'error', message: data?.message || 'Failed to load property details' });
         }
       })
-      .catch(() => setError('Network error'))
+      .catch(() => useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' }))
       .finally(() => setFetching(false));
   }, [uuid]);
 
   const handleSubmit = async (form) => {
     setLoading(true);
-    setError(null);
     try {
       const data = await PropertyService.update(uuid, form);
       if (data?.success) {
-        router.push(`/properties/${uuid}`);
+        useUiStore.getState().showModal({
+          type: 'success',
+          message: data?.message || 'Property updated successfully.',
+          onRefresh: () => router.push(`/properties/${uuid}`),
+        });
         return {};
       }
-      setError(data?.message);
+      useUiStore.getState().showModal({
+        type: 'error',
+        message: data?.message || 'Failed to update property.',
+      });
       return { errors: data?.errors || {} };
     } catch {
-      setError('Network error');
+      useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' });
       return {};
     } finally {
       setLoading(false);
@@ -65,10 +71,10 @@ export default function EditPropertyPage() {
     );
   }
 
-  if (error && !property) {
+  if (!property) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-        <p className="text-red-600 mb-4">{error}</p>
+        <p className="text-gray-500 mb-4">Property not found.</p>
         <Link href="/properties" className="btn-secondary">← Back</Link>
       </div>
     );
@@ -97,15 +103,6 @@ export default function EditPropertyPage() {
 
       <div className="bg-white border border-gray-200 rounded-md p-6">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">Property Information</p>
-
-        {error && (
-          <div className="mb-5 flex items-start gap-3 rounded-md bg-red-50 border border-red-200 px-4 py-3">
-            <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
 
         <PropertyForm
           initial={property}

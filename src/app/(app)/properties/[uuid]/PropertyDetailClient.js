@@ -12,6 +12,7 @@ import {
   UnitsTab,
   ContractsTab,
 } from '@/modules/properties/propertiesModule';
+import useUiStore from '@/store/uiStore';
 
 function capitalize(str) {
   if (!str || typeof str !== 'string') return str;
@@ -30,27 +31,6 @@ function SummaryCell({ label, value, large, color }) {
   );
 }
 
-function PageAlert({ type, message, onClose }) {
-  if (!message) return null;
-  const ok = type === 'success';
-  return (
-    <div className={`flex items-start gap-3 rounded-md px-4 py-3 border ${ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-      <svg className={`w-4 h-4 mt-0.5 shrink-0 ${ok ? 'text-green-500' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        {ok
-          ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        }
-      </svg>
-      <p className={`text-sm flex-1 ${ok ? 'text-green-800' : 'text-red-700'}`}>{message}</p>
-      <button onClick={onClose} className={`${ok ? 'text-green-400 hover:text-green-700' : 'text-red-400 hover:text-red-700'} transition-colors`}>
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-  );
-}
-
 export default function PropertyDetailClient({ uuid, initialProperty = null, initialError = null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,7 +44,6 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   const [activeFloor, setActiveFloor] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [notification, setNotification] = useState(null);
 
   /*
    * mountedTabs tracks which tab components have been opened at least once.
@@ -85,14 +64,6 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
       .catch(() => setError('Network error'))
       .finally(() => setLoading(false));
   }, [uuid]); // stable — only runs when SSR gave no data
-
-  useEffect(() => {
-    if (!notification) return;
-    const t = setTimeout(() => setNotification(null), 4000);
-    return () => clearTimeout(t);
-  }, [notification]);
-
-  const notify = useCallback((type, message) => setNotification({ type, message }), []);
 
   /* activateTab: adds tab to mountedTabs (mounts it for the first time) and switches view */
   const activateTab = useCallback((tabId) => {
@@ -119,11 +90,11 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
         router.push('/properties');
       } else {
         setDeleteOpen(false);
-        notify('error', data?.message);
+        useUiStore.getState().showModal({ type: 'error', message: data?.message || 'Failed to delete property' });
       }
     } catch {
       setDeleteOpen(false);
-      notify('error', 'Network error');
+      useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' });
     } finally {
       setDeleting(false);
     }
@@ -178,8 +149,6 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
           Back to Properties
         </Link>
       </div>
-
-      <PageAlert type={notification?.type} message={notification?.message} onClose={() => setNotification(null)} />
 
       {/* Property header card */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -314,7 +283,6 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
           <UnitsTab
             propertyUuid={uuid}
             initialFloor={activeFloor}
-            onNotify={notify}
             onBackToFloors={() => { setActiveFloor(null); activateTab('floors'); }}
           />
         </div>
@@ -323,7 +291,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
       {/* Contracts tab */}
       {mountedTabs.has('contracts') && (
         <div className={tab !== 'contracts' ? 'hidden' : ''}>
-          <ContractsTab propertyUuid={uuid} onNotify={notify} />
+          <ContractsTab propertyUuid={uuid} />
         </div>
       )}
 

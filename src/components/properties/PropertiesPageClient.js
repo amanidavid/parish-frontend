@@ -5,6 +5,7 @@ import PropertyService from '@/services/PropertyService';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import useConfirmModal from '@/hooks/useConfirmModal';
 import useCan from '@/hooks/useCan';
 
 const PER_PAGE = 15;
@@ -34,8 +35,7 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [page, setPage] = useState(initialMeta?.current_page ?? 1);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const confirmModal = useConfirmModal();
   const searchRef = useRef(null);
 
   const canCreate = useCan('properties.create');
@@ -86,26 +86,16 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
     setPage(1);
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      const data = await PropertyService.destroy(deleteTarget.uuid);
-      if (data?.success !== false) {
-        setDeleteTarget(null);
-        hydratedInitialRef.current = false;
-        fetchProperties();
-      } else {
-        setDeleteTarget(null);
-        setError(data?.message);
-      }
-    } catch {
-      setDeleteTarget(null);
-      setError('Network error');
-    } finally {
-      setDeleting(false);
+  const handleDelete = useCallback(async () => {
+    const res = await confirmModal.execute(
+      (prop) => PropertyService.destroy(prop.uuid),
+      { successMessage: 'Property deleted successfully.', errorMessage: 'Failed to delete property.' }
+    );
+    if (res?.success) {
+      hydratedInitialRef.current = false;
+      fetchProperties();
     }
-  };
+  }, [confirmModal, fetchProperties]);
 
   return (
     <div className="space-y-5">
@@ -260,7 +250,7 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
                         )}
                         {canDelete && (
                           <button
-                            onClick={() => setDeleteTarget(prop)}
+                            onClick={() => confirmModal.prompt(prop)}
                             className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
                           >
                             Delete
@@ -283,12 +273,15 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
       </div>
 
       <ConfirmModal
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        open={confirmModal.open}
+        onClose={confirmModal.close}
         onConfirm={handleDelete}
-        loading={deleting}
+        onRetry={handleDelete}
+        danger
+        loading={confirmModal.loading}
+        result={confirmModal.result}
         title="Delete Property"
-        message={`Delete "${deleteTarget?.name}"? All associated floors and units will also be removed. This cannot be undone.`}
+        message={`Delete "${confirmModal.item?.name}"? All associated floors and units will also be removed. This cannot be undone.`}
         confirmLabel="Delete Property"
       />
     </div>

@@ -6,6 +6,8 @@ import UnitService from '@/services/UnitService';
 import Pagination from '@/components/ui/Pagination';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import useConfirmModal from '@/hooks/useConfirmModal';
+import useUiStore from '@/store/uiStore';
 
 const BTN = {
   gray: 'h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors',
@@ -43,26 +45,6 @@ function Spinner() {
       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
       <path fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" className="opacity-75" />
     </svg>
-  );
-}
-
-function TabAlert({ type, message, onClose }) {
-  if (!message) return null;
-  const ok = type === 'success';
-  return (
-    <div className={`flex items-start gap-3 rounded-md px-4 py-3 border ${ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-      <svg className={`w-4 h-4 mt-0.5 shrink-0 ${ok ? 'text-green-500' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        {ok
-          ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />}
-      </svg>
-      <p className={`text-sm flex-1 ${ok ? 'text-green-800' : 'text-red-700'}`}>{message}</p>
-      <button onClick={onClose} className={`${ok ? 'text-green-400 hover:text-green-600' : 'text-red-400 hover:text-red-600'} transition-colors`}>
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
   );
 }
 
@@ -294,7 +276,7 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
         onClose();
       } else {
         if (data?.errors) setErrors(data.errors);
-        setServerError(data?.message);
+        setServerError(data?.message || 'Request failed. Please check your input and try again.');
       }
     } catch {
       setServerError('Network error');
@@ -571,19 +553,9 @@ export default function ContractsTab({ propertyUuid }) {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
-  const [notification, setNotification] = useState(null);
   const [contractModal, setContractModal] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const confirmModal = useConfirmModal();
   const searchRef = useRef(null);
-
-  useEffect(() => {
-    if (!notification) return;
-    const t = setTimeout(() => setNotification(null), 4500);
-    return () => clearTimeout(t);
-  }, [notification]);
-
-  const notify = useCallback((type, message) => setNotification({ type, message }), []);
 
   const loadContracts = useCallback(() => {
     setLoading(true);
@@ -598,12 +570,12 @@ export default function ContractsTab({ propertyUuid }) {
           setContracts(data.data || []);
           setMeta(data.meta || null);
         } else {
-          notify('error', data?.message);
+          useUiStore.getState().showModal({ type: 'error', message: data?.message || 'Failed to load contracts' });
         }
       })
-      .catch(() => notify('error', 'Network error'))
+      .catch(() => useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' }))
       .finally(() => setLoading(false));
-  }, [propertyUuid, appliedSearch, statusFilter, page, notify]);
+  }, [propertyUuid, appliedSearch, statusFilter, page]);
 
   useEffect(() => { loadContracts(); }, [loadContracts]);
 
@@ -620,28 +592,23 @@ export default function ContractsTab({ propertyUuid }) {
   };
 
   const handleSaved = (contract, isEdit, message) => {
-    notify('success', message);
+    useUiStore.getState().showModal({
+      type: 'success',
+      message,
+      onRefresh: loadContracts,
+    });
     loadContracts();
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      const data = await ContractService.destroy(deleteTarget.uuid);
-      if (data?.success !== false) {
-        notify('success', data?.message);
-        loadContracts();
-      } else {
-        notify('error', data?.message);
-      }
-    } catch {
-      notify('error', 'Network error');
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
+  const handleDelete = useCallback(async () => {
+    const res = await confirmModal.execute(
+      (contract) => ContractService.destroy(contract.uuid),
+      { successMessage: 'Contract deleted successfully.', errorMessage: 'Failed to delete contract.' }
+    );
+    if (res?.success) {
+      loadContracts();
     }
-  };
+  }, [confirmModal, loadContracts]);
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const fmtAmount = (amount, currency) =>
@@ -696,8 +663,6 @@ export default function ContractsTab({ propertyUuid }) {
           New Contract
         </button>
       </div>
-
-      <TabAlert type={notification?.type} message={notification?.message} onClose={() => setNotification(null)} />
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {loading ? (
@@ -755,7 +720,7 @@ export default function ContractsTab({ propertyUuid }) {
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button className={BTN.gray} onClick={() => setContractModal(c)}>Edit</button>
-                        <button className={BTN.red} onClick={() => setDeleteTarget(c)}>Delete</button>
+                        <button className={BTN.red} onClick={() => confirmModal.prompt(c)}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -776,12 +741,15 @@ export default function ContractsTab({ propertyUuid }) {
       />
 
       <ConfirmModal
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        open={confirmModal.open}
+        onClose={confirmModal.close}
         onConfirm={handleDelete}
-        loading={deleting}
+        onRetry={handleDelete}
+        danger
+        loading={confirmModal.loading}
+        result={confirmModal.result}
         title="Delete Contract"
-        message={`Delete contract "${deleteTarget?.contract_number}"? This action cannot be undone.`}
+        message={`Delete contract "${confirmModal.item?.contract_number}"? This action cannot be undone.`}
         confirmLabel="Delete Contract"
       />
     </div>

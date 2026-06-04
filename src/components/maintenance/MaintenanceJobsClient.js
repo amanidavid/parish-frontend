@@ -8,6 +8,7 @@ import UnitService from '@/services/UnitService';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import Pagination from '@/components/ui/Pagination';
+import useConfirmModal from '@/hooks/useConfirmModal';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtAmt(n) {
@@ -241,7 +242,7 @@ function JobsTab({ startDate, endDate }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [confirm, setConfirm] = useState({ open: false, job: null });
+  const confirmModal = useConfirmModal();
 
   // ── Load jobs ──
   const loadJobs = useCallback(async (pg, q) => {
@@ -364,13 +365,14 @@ function JobsTab({ startDate, endDate }) {
   }, [form, modal, page, search, loadJobs]);
 
   const handleDelete = useCallback(async () => {
-    if (!confirm.job) return;
-    setSubmitting(true);
-    await MaintenanceService.jobsDestroy(confirm.job.uuid);
-    setSubmitting(false);
-    setConfirm({ open: false, job: null });
-    loadJobs(page, search);
-  }, [confirm.job, page, search, loadJobs]);
+    const res = await confirmModal.execute(
+      (job) => MaintenanceService.jobsDestroy(job.uuid, { showLoader: false }),
+      { successMessage: 'Job deleted successfully.', errorMessage: 'Failed to delete job.' }
+    );
+    if (res?.success) {
+      loadJobs(page, search);
+    }
+  }, [confirmModal, page, search, loadJobs]);
 
   return (
     <div className="space-y-4">
@@ -422,7 +424,7 @@ function JobsTab({ startDate, endDate }) {
                   <div className="flex items-center justify-end gap-2">
                     <Link href={`/maintenance/${job.uuid}`} className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors">View</Link>
                     <button onClick={() => openEdit(job)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">Edit</button>
-                    <button onClick={() => setConfirm({ open: true, job })} className="text-xs font-medium px-2.5 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button>
+                    <button onClick={() => confirmModal.prompt(job)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button>
                   </div>
                 </td>
               </tr>
@@ -489,13 +491,16 @@ function JobsTab({ startDate, endDate }) {
       </Modal>
 
       <ConfirmModal
-        open={confirm.open}
-        onClose={() => setConfirm({ open: false, job: null })}
+        open={confirmModal.open}
+        onClose={confirmModal.close}
         onConfirm={handleDelete}
+        onRetry={handleDelete}
         title="Delete Job"
-        message={`Delete "${confirm.job?.title}"? This will also remove all related expenses.`}
+        message={`Delete "${confirmModal.item?.title}"? This will also remove all related expenses.`}
         confirmLabel="Delete"
-        loading={submitting}
+        danger
+        loading={confirmModal.loading}
+        result={confirmModal.result}
       />
     </div>
   );
@@ -561,8 +566,8 @@ export default function MaintenanceJobsClient() {
           {TABS.map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}>
               {tab.label}
             </button>

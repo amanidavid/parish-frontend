@@ -1,59 +1,34 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import StaffService from '@/services/StaffService';
 import StaffForm from '@/components/staff/StaffForm';
-
-function PageAlert({ type, message, onClose }) {
-  if (!message) return null;
-  const ok = type === 'success';
-  return (
-    <div className={`flex items-start gap-3 rounded-md px-4 py-3 border ${ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-      <svg className={`w-4 h-4 mt-0.5 shrink-0 ${ok ? 'text-green-500' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        {ok
-          ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />}
-      </svg>
-      <p className={`text-sm flex-1 ${ok ? 'text-green-800' : 'text-red-700'}`}>{message}</p>
-      <button onClick={onClose} className={`${ok ? 'text-green-400 hover:text-green-600' : 'text-red-400 hover:text-red-600'} transition-colors`}>
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-  );
-}
+import useUiStore from '@/store/uiStore';
 
 export default function CreateStaffPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [notification, setNotification] = useState(null);
-
-  useEffect(() => {
-    if (!notification) return;
-    const t = setTimeout(() => setNotification(null), 4500);
-    return () => clearTimeout(t);
-  }, [notification]);
 
   const handleSubmit = async (form) => {
     setLoading(true);
-    setError(null);
-    setNotification(null);
     try {
       const data = await StaffService.store(form);
       if (data?.success) {
-        setNotification({ type: 'success', message: data?.message });
-        setTimeout(() => router.push('/staff'), 1200);
+        useUiStore.getState().showModal({
+          type: 'success',
+          message: data?.message || 'Staff created successfully.',
+          onRefresh: () => router.push('/staff'),
+        });
         return {};
       }
-      setError(data?.message);
-      setNotification({ type: 'error', message: data?.message });
+      useUiStore.getState().showModal({
+        type: 'error',
+        message: data?.message || 'Failed to create staff.',
+      });
       return { errors: data?.errors || {} };
     } catch {
-      setError('Network error');
-      setNotification({ type: 'error', message: 'Network error' });
+      useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' });
       return {};
     } finally {
       setLoading(false);
@@ -75,20 +50,9 @@ export default function CreateStaffPage() {
         </Link>
       </div>
 
-      <PageAlert type={notification?.type} message={notification?.message} onClose={() => setNotification(null)} />
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg p-6">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">Staff Information</p>
-
-          {error && (
-            <div className="mb-5 flex items-start gap-3 rounded-md bg-red-50 border border-red-200 px-4 py-3">
-              <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
 
           <StaffForm onSubmit={handleSubmit} loading={loading} submitLabel="Create Staff" />
         </div>

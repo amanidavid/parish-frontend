@@ -6,6 +6,8 @@ import FloorService from '@/services/FloorService';
 import Pagination from '@/components/ui/Pagination';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import useConfirmModal from '@/hooks/useConfirmModal';
+import useUiStore from '@/store/uiStore';
 
 const BTN = {
   gray: 'h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors',
@@ -35,27 +37,6 @@ function Spinner() {
       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
       <path fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" className="opacity-75" />
     </svg>
-  );
-}
-
-function TabAlert({ type, message, onClose }) {
-  if (!message) return null;
-  const ok = type === 'success';
-  return (
-    <div className={`flex items-center gap-3 rounded-md px-4 py-2.5 mb-4 border text-sm ${ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-      <svg className={`w-4 h-4 shrink-0 ${ok ? 'text-green-500' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        {ok
-          ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        }
-      </svg>
-      <p className={`flex-1 ${ok ? 'text-green-800' : 'text-red-700'}`}>{message}</p>
-      <button onClick={onClose} className={`${ok ? 'text-green-400 hover:text-green-700' : 'text-red-400 hover:text-red-700'} transition-colors`}>
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
   );
 }
 
@@ -105,7 +86,7 @@ function UnitModal({ open, onClose, onSaved, floors, initial, preselectFloorUuid
         onClose();
       } else {
         if (data?.errors) setErrors(data.errors);
-        else setServerError(data?.message);
+        else setServerError(data?.message || 'Request failed. Please check your input and try again.');
       }
     } catch {
       setServerError('Network error');
@@ -221,27 +202,17 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
   const [selectedFloorUuid, setSelectedFloorUuid] = useState(initialFloor?.uuid || '');
   const [unitsLoading, setUnitsLoading] = useState(true);
   const [floorsLoading, setFloorsLoading] = useState(true);
-  const [notification, setNotification] = useState(null);
   const [unitModal, setUnitModal] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const confirmModal = useConfirmModal();
   const searchRef = useRef(null);
   const unitsAbortRef = useRef(null);
   const floorsAbortRef = useRef(null);
-
-  useEffect(() => {
-    if (!notification) return;
-    const t = setTimeout(() => setNotification(null), 4500);
-    return () => clearTimeout(t);
-  }, [notification]);
 
   /* Abort all in-flight requests on unmount */
   useEffect(() => () => {
     unitsAbortRef.current?.abort();
     floorsAbortRef.current?.abort();
   }, []);
-
-  const notify = useCallback((type, message) => setNotification({ type, message }), []);
 
   /* Load floors for the filter dropdown — bounded to 100 rows, abortable */
   useEffect(() => {
@@ -279,14 +250,14 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
         setUnits(data.data || []);
         setMeta(data.meta || null);
       } else {
-        notify('error', data?.message);
+        useUiStore.getState().showModal({ type: 'error', message: data?.message || 'Failed to load units' });
       }
     } catch (err) {
-      if (err?.name !== 'AbortError') notify('error', 'Network error');
+      if (err?.name !== 'AbortError') useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' });
     } finally {
       if (!signal.aborted) setUnitsLoading(false);
     }
-  }, [selectedFloorUuid, propertyUuid, appliedSearch, page, notify]);
+  }, [selectedFloorUuid, propertyUuid, appliedSearch, page]);
 
   useEffect(() => { loadUnits(); }, [loadUnits]);
 
@@ -303,7 +274,11 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
   };
 
   const handleSaved = (unit, isEdit, message) => {
-    notify('success', message);
+    useUiStore.getState().showModal({
+      type: 'success',
+      message,
+      onRefresh: () => { if (page !== 1) setPage(1); else loadUnits(); },
+    });
     if (isEdit) {
       /* Optimistic in-place update — no server round-trip for edits */
       setUnits((prev) => prev.map((u) => u.uuid === unit.uuid ? { ...u, ...unit } : u));
@@ -313,24 +288,15 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      const data = await UnitService.destroy(deleteTarget.uuid);
-      if (data?.success !== false) {
-        notify('success', data?.message);
-        loadUnits(); /* re-fetch needed — pagination row count changes */
-      } else {
-        notify('error', data?.message);
-      }
-    } catch {
-      notify('error', 'Network error');
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
+  const handleDelete = useCallback(async () => {
+    const res = await confirmModal.execute(
+      (unit) => UnitService.destroy(unit.uuid),
+      { successMessage: 'Unit deleted successfully.', errorMessage: 'Failed to delete unit.' }
+    );
+    if (res?.success) {
+      loadUnits(); /* re-fetch needed — pagination row count changes */
     }
-  };
+  }, [confirmModal, loadUnits]);
 
   const selectedFloorLabel = floors.find((f) => f.uuid === selectedFloorUuid)?.name;
 
@@ -407,8 +373,6 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
         </button>
       </div>
 
-      <TabAlert type={notification?.type} message={notification?.message} onClose={() => setNotification(null)} />
-
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {floors.length === 0 && !floorsLoading ? (
           <div className="text-center py-12">
@@ -463,7 +427,7 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
                       <div className="flex items-center justify-end gap-1">
                         <Link href={`/contracts?unit_uuid=${unit.uuid}&property_uuid=${propertyUuid}`} className={BTN.blue}>Contracts</Link>
                         <button className={BTN.gray} onClick={() => setUnitModal(unit)}>Edit</button>
-                        <button className={BTN.red} onClick={() => setDeleteTarget(unit)}>Delete</button>
+                        <button className={BTN.red} onClick={() => confirmModal.prompt(unit)}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -485,12 +449,15 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
       />
 
       <ConfirmModal
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        open={confirmModal.open}
+        onClose={confirmModal.close}
         onConfirm={handleDelete}
-        loading={deleting}
+        onRetry={handleDelete}
+        danger
+        loading={confirmModal.loading}
+        result={confirmModal.result}
         title="Delete Unit"
-        message={`Delete unit "${deleteTarget?.unit_number}"? This cannot be undone.`}
+        message={`Delete unit "${confirmModal.item?.unit_number}"? This cannot be undone.`}
         confirmLabel="Delete Unit"
       />
     </div>

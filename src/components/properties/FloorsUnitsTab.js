@@ -5,6 +5,7 @@ import FloorService from '@/services/FloorService';
 import UnitService from '@/services/UnitService';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import useConfirmModal from '@/hooks/useConfirmModal';
 
 const UNIT_STATUS = {
   occupied: { label: 'Occupied', dot: 'bg-green-500', text: 'text-green-700', bg: 'bg-green-50' },
@@ -71,7 +72,7 @@ function FloorModal({ open, onClose, onSave, propertyUuid, initial }) {
         onClose();
       } else {
         if (data?.errors) setErrors(data.errors);
-        else setServerError(data?.message);
+        else setServerError(data?.message || 'Request failed. Please check your input and try again.');
       }
     } catch {
       setServerError('Network error');
@@ -167,7 +168,7 @@ function UnitModal({ open, onClose, onSave, floorUuid, initial }) {
         onClose();
       } else {
         if (data?.errors) setErrors(data.errors);
-        else setServerError(data?.message);
+        else setServerError(data?.message || 'Request failed. Please check your input and try again.');
       }
     } catch {
       setServerError('Network error');
@@ -248,10 +249,8 @@ function FloorRow({ floor, propertyUuid, onFloorUpdated, onFloorDeleted, onNotif
   const [editFloor, setEditFloor] = useState(false);
   const [addUnit, setAddUnit] = useState(false);
   const [editUnit, setEditUnit] = useState(null);
-  const [deleteFloorOpen, setDeleteFloorOpen] = useState(false);
-  const [deleteUnit, setDeleteUnit] = useState(null);
-  const [deletingFloor, setDeletingFloor] = useState(false);
-  const [deletingUnit, setDeletingUnit] = useState(false);
+  const floorConfirm = useConfirmModal();
+  const unitConfirm = useConfirmModal();
 
   const loadUnits = useCallback(async () => {
     if (unitsLoaded) return;
@@ -282,46 +281,25 @@ function FloorRow({ floor, propertyUuid, onFloorUpdated, onFloorDeleted, onNotif
     onNotify('success', message);
   };
 
-  const handleDeleteFloor = async () => {
-    setDeletingFloor(true);
-    try {
-      const data = await FloorService.destroy(floor.uuid);
-      if (data?.success !== false) {
-        setDeleteFloorOpen(false);
-        onFloorDeleted(floor.uuid);
-        onNotify('success', data?.message);
-      } else {
-        onNotify('error', data?.message);
-        setDeleteFloorOpen(false);
-      }
-    } catch {
-      onNotify('error', 'Network error.');
-      setDeleteFloorOpen(false);
-    } finally {
-      setDeletingFloor(false);
+  const handleDeleteFloor = useCallback(async () => {
+    const res = await floorConfirm.execute(
+      () => FloorService.destroy(floor.uuid),
+      { successMessage: 'Floor deleted successfully.', errorMessage: 'Failed to delete floor.' }
+    );
+    if (res?.success) {
+      onFloorDeleted(floor.uuid);
     }
-  };
+  }, [floorConfirm, floor.uuid, onFloorDeleted]);
 
-  const handleDeleteUnit = async () => {
-    if (!deleteUnit) return;
-    setDeletingUnit(true);
-    try {
-      const data = await UnitService.destroy(deleteUnit.uuid);
-      if (data?.success !== false) {
-        setUnits((prev) => prev.filter((u) => u.uuid !== deleteUnit.uuid));
-        setDeleteUnit(null);
-        onNotify('success', data?.message);
-      } else {
-        onNotify('error', data?.message);
-        setDeleteUnit(null);
-      }
-    } catch {
-      onNotify('error', 'Network error.');
-      setDeleteUnit(null);
-    } finally {
-      setDeletingUnit(false);
+  const handleDeleteUnit = useCallback(async () => {
+    const res = await unitConfirm.execute(
+      (unit) => UnitService.destroy(unit.uuid),
+      { successMessage: 'Unit deleted successfully.', errorMessage: 'Failed to delete unit.' }
+    );
+    if (res?.success) {
+      setUnits((prev) => prev.filter((u) => u.uuid !== unitConfirm.item?.uuid));
     }
-  };
+  }, [unitConfirm]);
 
   return (
     <>
@@ -353,7 +331,7 @@ function FloorRow({ floor, propertyUuid, onFloorUpdated, onFloorDeleted, onNotif
             <button className="btn-secondary text-xs py-1 px-2.5" onClick={() => setEditFloor(true)}>Edit</button>
             <button
               className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-              onClick={() => setDeleteFloorOpen(true)}
+              onClick={() => floorConfirm.prompt(floor)}
               title="Delete floor"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -408,7 +386,7 @@ function FloorRow({ floor, propertyUuid, onFloorUpdated, onFloorDeleted, onNotif
                           </button>
                           <button
                             className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-                            onClick={() => setDeleteUnit(unit)}
+                            onClick={() => unitConfirm.prompt(unit)}
                             title="Delete unit"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -451,22 +429,28 @@ function FloorRow({ floor, propertyUuid, onFloorUpdated, onFloorDeleted, onNotif
       />
 
       <ConfirmModal
-        open={deleteFloorOpen}
-        onClose={() => setDeleteFloorOpen(false)}
+        open={floorConfirm.open}
+        onClose={floorConfirm.close}
         onConfirm={handleDeleteFloor}
-        loading={deletingFloor}
+        onRetry={handleDeleteFloor}
+        danger
+        loading={floorConfirm.loading}
+        result={floorConfirm.result}
         title="Delete Floor"
         message={`Delete "${floor.name}"? All units on this floor will also be removed. This cannot be undone.`}
         confirmLabel="Delete Floor"
       />
 
       <ConfirmModal
-        open={!!deleteUnit}
-        onClose={() => setDeleteUnit(null)}
+        open={unitConfirm.open}
+        onClose={unitConfirm.close}
         onConfirm={handleDeleteUnit}
-        loading={deletingUnit}
+        onRetry={handleDeleteUnit}
+        danger
+        loading={unitConfirm.loading}
+        result={unitConfirm.result}
         title="Delete Unit"
-        message={`Delete unit "${deleteUnit?.unit_number}"? This cannot be undone.`}
+        message={`Delete unit "${unitConfirm.item?.unit_number}"? This cannot be undone.`}
         confirmLabel="Delete Unit"
       />
     </>

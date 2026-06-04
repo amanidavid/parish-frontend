@@ -1,26 +1,7 @@
 'use client';
 import { useState } from 'react';
 import ClientAuthService from '@/services/ClientAuthService';
-
-function Alert({ type, message, onClose }) {
-  if (!message) return null;
-  const ok = type === 'success';
-  return (
-    <div className={`flex items-start gap-3 rounded-md px-4 py-3 border ${ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-      <svg className={`w-4 h-4 mt-0.5 shrink-0 ${ok ? 'text-green-500' : 'text-red-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        {ok
-          ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />}
-      </svg>
-      <p className={`text-sm flex-1 ${ok ? 'text-green-800' : 'text-red-700'}`}>{message}</p>
-      <button onClick={onClose} className={`${ok ? 'text-green-400 hover:text-green-600' : 'text-red-400 hover:text-red-600'} transition-colors`}>
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-  );
-}
+import useUiStore from '@/store/uiStore';
 
 function FieldError({ message }) {
   if (!message) return null;
@@ -35,7 +16,6 @@ export default function SettingsPage() {
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [notification, setNotification] = useState(null);
 
   const change = (e) => {
     const { name, value } = e.target;
@@ -46,20 +26,25 @@ export default function SettingsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
-    setNotification(null);
     setSaving(true);
 
     try {
       const data = await ClientAuthService.changePassword(form);
       if (data?.success) {
-        setNotification({ type: 'success', message: data?.message || 'Password changed successfully.' });
+        useUiStore.getState().showModal({
+          type: 'success',
+          message: data?.message || 'Password changed successfully.',
+        });
         setForm({ current_password: '', password: '', password_confirmation: '' });
       } else {
         if (data?.errors) setErrors(data.errors);
-        setNotification({ type: 'error', message: data?.message });
+        useUiStore.getState().showModal({
+          type: 'error',
+          message: data?.message || 'Request failed. Please check your input and try again.',
+        });
       }
     } catch {
-      setNotification({ type: 'error', message: 'Network error' });
+      useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' });
     } finally {
       setSaving(false);
     }
@@ -71,8 +56,6 @@ export default function SettingsPage() {
         <h1 className="text-xl font-bold text-gray-900">Update Password</h1>
         <p className="text-sm text-gray-400 mt-0.5">Change your account password</p>
       </div>
-
-      <Alert type={notification?.type} message={notification?.message} onClose={() => setNotification(null)} />
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">

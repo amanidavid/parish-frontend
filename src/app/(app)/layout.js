@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import PageProgress from '@/components/ui/PageProgress';
+import NotificationModal from '@/components/ui/NotificationModal';
 import useUiStore from '@/store/uiStore';
 import useAuthStore from '@/store/authStore';
 
@@ -121,6 +122,9 @@ export default function AppLayout({ children }) {
 
       {/* Global page-transition loader */}
       <PageProgress />
+
+      {/* Global notification modal */}
+      <NotificationModal />
 
       {/* Main column */}
       <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">

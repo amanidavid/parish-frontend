@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import StaffService from '@/services/StaffService';
 import StaffForm from '@/components/staff/StaffForm';
+import useUiStore from '@/store/uiStore';
 
 function Skeleton() {
   return (
@@ -23,9 +24,7 @@ export default function EditStaffPage() {
   const router = useRouter();
   const [member, setMember] = useState(null);
   const [fetching, setFetching] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!uuid) return;
@@ -35,26 +34,32 @@ export default function EditStaffPage() {
         if (data?.success && data?.data) {
           setMember(data.data);
         } else {
-          setFetchError(data?.message || 'Failed to load staff details');
+          useUiStore.getState().showModal({ type: 'error', message: data?.message || 'Failed to load staff details' });
         }
       })
-      .catch(() => setFetchError('Network error'))
+      .catch(() => useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' }))
       .finally(() => setFetching(false));
   }, [uuid]);
 
   const handleSubmit = async (form) => {
     setLoading(true);
-    setError(null);
     try {
       const data = await StaffService.update(uuid, form);
       if (data?.success) {
-        router.push(`/staff/${uuid}`);
+        useUiStore.getState().showModal({
+          type: 'success',
+          message: data?.message || 'Staff updated successfully.',
+          onRefresh: () => router.push(`/staff/${uuid}`),
+        });
         return {};
       }
-      setError(data?.message);
+      useUiStore.getState().showModal({
+        type: 'error',
+        message: data?.message || 'Failed to update staff.',
+      });
       return { errors: data?.errors || {} };
     } catch {
-      setError('Network error');
+      useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' });
       return {};
     } finally {
       setLoading(false);
@@ -94,18 +99,12 @@ export default function EditStaffPage() {
     );
   }
 
-  if (fetchError) {
+  if (!member) {
     return (
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <h1 className="text-base font-bold text-gray-900">Edit Staff</h1>
           <Link href="/staff" className="btn-secondary text-sm">Back to Staff</Link>
-        </div>
-        <div className="flex items-start gap-3 rounded-md bg-red-50 border border-red-200 px-4 py-3">
-          <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm text-red-700">{fetchError}</p>
         </div>
       </div>
     );
@@ -144,15 +143,6 @@ export default function EditStaffPage() {
       </div>
 
       <div className="bg-white border border-gray-200 rounded-md p-6">
-        {error && (
-          <div className="mb-5 flex items-start gap-3 rounded-md bg-red-50 border border-red-200 px-4 py-3">
-            <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
-
         <StaffForm
           key={[member.uuid, member.name, member.phone, member.base_user?.username, member.status].join(':')}
           initial={member}

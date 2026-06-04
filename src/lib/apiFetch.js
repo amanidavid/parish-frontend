@@ -21,5 +21,5 @@ export default async function apiFetch(url, options = {}) {
     return { success: false, message: 'Session expired' };
   }
 
-  return res.json().catch(() => ({ success: false }));
+  return res.json().catch(() => ({ success: false, message: 'Invalid server response' }));
 }
