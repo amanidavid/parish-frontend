@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import useAuthStore from '@/store/authStore';
+import { OTP_RESEND_SECONDS } from '@/constants/auth';
 
 function Spinner() {
   return (
@@ -23,8 +24,17 @@ function VerifyOtpForm() {
 
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [cooldown, setCooldown] = useState(OTP_RESEND_SECONDS);
+  const [canResend, setCanResend] = useState(false);
   const inputRefs = useRef([]);
+
+  useEffect(() => {
+    if (cooldown <= 0) { setCanResend(true); return; }
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
@@ -140,9 +150,58 @@ function VerifyOtpForm() {
           {loading ? <><Spinner /> Verifying...</> : 'Verify & Sign in'}
         </button>
 
-        <p className="text-center text-sm text-gray-500">
-          <Link href="/login" className="text-blue-600 font-semibold hover:underline">← Back to login</Link>
-        </p>
+        <div className="text-center space-y-2">
+          {!canResend ? (
+            <p className="text-sm text-gray-400">Resend OTP in {cooldown}s</p>
+          ) : (
+            <button
+              type="button"
+              onClick={async () => {
+                setResendLoading(true);
+                setError(null);
+                try {
+                  const stored = JSON.parse(sessionStorage.getItem('last_auth_attempt') || '{}');
+                  if (!stored.payload) {
+                    setError('Unable to resend. Please go back and log in again.');
+                    setResendLoading(false);
+                    return;
+                  }
+                  const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(stored.payload),
+                  });
+                  const data = await res.json();
+                  if (!res.ok || !data?.success) {
+                    setError(data?.message || 'Failed to resend OTP');
+                    setResendLoading(false);
+                    return;
+                  }
+                  const newCid = data?.data?.challenge_id;
+                  if (newCid) {
+                    setDigits(['', '', '', '', '', '']);
+                    setCooldown(OTP_RESEND_SECONDS);
+                    setCanResend(false);
+                    router.replace(`/verify-otp?cid=${newCid}${fromRegister ? '&from=register' : ''}`);
+                  } else {
+                    setError('Failed to resend OTP');
+                  }
+                } catch {
+                  setError('Network error');
+                } finally {
+                  setResendLoading(false);
+                }
+              }}
+              disabled={resendLoading}
+              className="text-sm text-blue-600 font-semibold hover:underline disabled:opacity-50"
+            >
+              {resendLoading ? 'Resending...' : "Didn't receive the code? Resend OTP"}
+            </button>
+          )}
+          <p className="text-sm text-gray-500">
+            <Link href="/login" className="text-blue-600 font-semibold hover:underline">← Back to login</Link>
+          </p>
+        </div>
       </form>
     </div>
   );

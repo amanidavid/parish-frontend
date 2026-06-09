@@ -66,6 +66,7 @@ export default function LoginPage() {
       }
       const challengeId = data?.data?.challenge_id;
       if (challengeId) {
+        sessionStorage.setItem('last_auth_attempt', JSON.stringify({ payload }));
         router.push(`/verify-otp?cid=${challengeId}`);
       } else {
         setError(data?.message || 'Unexpected response');

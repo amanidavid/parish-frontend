@@ -1,9 +1,10 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import CountryCodePicker from '@/components/ui/CountryCodePicker';
 import { DEFAULT_COUNTRY } from '@/constants/countryCodes';
+import { OTP_RESEND_SECONDS } from '@/constants/auth';
 
 function Spinner() {
   return (
@@ -34,6 +35,8 @@ export default function ForgotPasswordPage() {
   const [successMessage, setSuccessMessage] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
+  const [canRequestAgain, setCanRequestAgain] = useState(false);
 
   const handleChange = useCallback((e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -45,6 +48,12 @@ export default function ForgotPasswordPage() {
     setCountry(c);
     setFieldErrors((prev) => ({ ...prev, phone: null }));
   }, []);
+
+  useEffect(() => {
+    if (resetCooldown <= 0) { setCanRequestAgain(true); return; }
+    const t = setTimeout(() => setResetCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resetCooldown]);
 
   const handleRequest = async (e) => {
     e.preventDefault();
@@ -83,6 +92,8 @@ export default function ForgotPasswordPage() {
       if (cid) {
         setChallengeId(cid);
         setStep('reset');
+        setResetCooldown(OTP_RESEND_SECONDS);
+        setCanRequestAgain(false);
         setSuccessMessage(data?.message || 'OTP sent');
       } else {
         // Account not found — backend returns success with null data
@@ -361,14 +372,20 @@ export default function ForgotPasswordPage() {
           </button>
 
           <p className="text-center text-sm text-gray-500">
-            Didn&apos;t receive the code?{' '}
-            <button
-              type="button"
-              onClick={() => setStep('request')}
-              className="text-blue-600 font-semibold hover:underline"
-            >
-              Request again
-            </button>
+            {!canRequestAgain ? (
+              <span className="text-gray-400">Resend OTP in {resetCooldown}s</span>
+            ) : (
+              <>
+                Didn&apos;t receive the code?{' '}
+                <button
+                  type="button"
+                  onClick={() => setStep('request')}
+                  className="text-blue-600 font-semibold hover:underline"
+                >
+                  Request again
+                </button>
+              </>
+            )}
           </p>
         </form>
       )}

@@ -87,6 +87,9 @@ export default function RegisterPage() {
       const challengeId = loginData?.data?.challenge_id;
 
       if (challengeId) {
+        sessionStorage.setItem('last_auth_attempt', JSON.stringify({
+          payload: { phone: form.phone, country_code: country.dialCode, password: form.password },
+        }));
         router.push(`/verify-otp?cid=${challengeId}&from=register`);
       } else {
         router.push('/login');
