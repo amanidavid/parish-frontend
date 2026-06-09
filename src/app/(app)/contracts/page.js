@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ContractService from '@/services/ContractService';
@@ -40,7 +40,7 @@ function fmtAmount(amount, currency) {
   return amount != null ? `${currency || ''} ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
 }
 
-export default function ContractsPage() {
+function ContractsContent() {
   const searchParams = useSearchParams();
   const initialUnitUuid = searchParams.get('unit_uuid') || '';
   const urlPropertyUuid = searchParams.get('property_uuid') || null;
@@ -267,5 +267,13 @@ export default function ContractsPage() {
         {meta && <Pagination meta={meta} onPageChange={setPage} />}
       </div>
     </div>
+  );
+}
+
+export default function ContractsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ContractsContent />
+    </Suspense>
   );
 }

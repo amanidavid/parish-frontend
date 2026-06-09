@@ -80,6 +80,23 @@ export default function RolesTab() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmResult, setConfirmResult] = useState(null);
 
+  const fetchRoles = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await AccessControlService.listRoles({ perPage: 50 });
+      if (res?.success) {
+        setRoles(res.data || []);
+      } else {
+        setError(res?.message || 'Failed to load roles');
+      }
+    } catch {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const promptDelete = useCallback((role) => {
     setDeletingRole(role);
     setConfirmResult(null);
@@ -111,24 +128,6 @@ export default function RolesTab() {
     setConfirmResult(null);
     setDeletingRole(null);
   }, []);
-
-  const fetchRoles = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await AccessControlService.listRoles({ perPage: 50 });
-      if (res?.success) {
-        setRoles(res.data || []);
-      } else {
-        setError(res?.message || 'Failed to load roles');
-      }
-    } catch {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
 
   useEffect(() => {
     fetchRoles();
