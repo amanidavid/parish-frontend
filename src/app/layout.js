@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "PropertyMIS",
+  title: process.env.NEXT_PUBLIC_APP_NAME || "PMS",
   description: "Property Management Information System",
 };
 

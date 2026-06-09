@@ -180,7 +180,7 @@ export default function Sidebar({ open }) {
         </div>
         {open && (
           <span className="font-bold text-gray-900 text-[15px] whitespace-nowrap tracking-tight">
-            PropertyMIS
+            {process.env.NEXT_PUBLIC_APP_NAME || "PMS"}
           </span>
         )}
       </div>
