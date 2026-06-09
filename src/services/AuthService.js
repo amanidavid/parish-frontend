@@ -7,7 +7,7 @@ const COOKIE_OPTS = {
   sameSite: 'lax',
   path: '/',
   maxAge: 60 * 60 * 24 * 7,
-  secure: process.env.NODE_ENV === 'production',
+  secure: process.env.COOKIE_SECURE === 'true',
 };
 
 /**
@@ -121,7 +121,7 @@ const AuthService = {
     await laravelRequest('/app/auth/logout', {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }).catch(() => {});
+    }).catch(() => { });
 
     await clearSession();
   },
