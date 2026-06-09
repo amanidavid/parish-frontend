@@ -20,7 +20,6 @@ export default function ForgotPasswordPage() {
   const [mode, setMode] = useState('phone');
   const [challengeId, setChallengeId] = useState('');
 
-  const [workspaceUuid, setWorkspaceUuid] = useState('');
   const [form, setForm] = useState({
     phone: '',
     email: '',
@@ -54,8 +53,8 @@ export default function ForgotPasswordPage() {
 
     const payload =
       mode === 'phone'
-        ? { workspace_uuid: workspaceUuid.trim(), country_code: country.dialCode, phone: form.phone.trim() }
-        : { workspace_uuid: workspaceUuid.trim(), email: form.email.trim() };
+        ? { country_code: country.dialCode, phone: form.phone.trim() }
+        : { email: form.email.trim() };
 
     try {
       const res = await fetch('/api/auth/forgot-password', {
@@ -66,8 +65,15 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
 
       if (!res.ok || !data?.success) {
-        if (data?.errors) setFieldErrors(data.errors);
-        setError(data?.message || 'Failed to send OTP');
+        const authErrors = data?.errors?.auth;
+        if (authErrors?.length) {
+          setError(authErrors[0]);
+        } else if (data?.errors) {
+          setFieldErrors(data.errors);
+          setError(data?.message || 'Failed to send OTP');
+        } else {
+          setError(data?.message || 'Failed to send OTP');
+        }
         return;
       }
 
@@ -160,41 +166,15 @@ export default function ForgotPasswordPage() {
 
       {step === 'request' ? (
         <form onSubmit={handleRequest} className="space-y-5">
-          {/* Workspace UUID */}
-          <div>
-            <label className="label" htmlFor="workspaceUuid">Workspace UUID</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </span>
-              <input
-                id="workspaceUuid"
-                name="workspaceUuid"
-                type="text"
-                className="input pl-10"
-                placeholder="11111111-2222-3333-4444-555555555555"
-                value={workspaceUuid}
-                onChange={(e) => setWorkspaceUuid(e.target.value)}
-                required
-              />
-            </div>
-            {fieldErrors?.workspace_uuid && (
-              <p className="mt-1 text-xs text-red-600">{fieldErrors.workspace_uuid[0]}</p>
-            )}
-          </div>
-
           {/* Mode toggle */}
           <div className="bg-gray-50 rounded-xl p-1 flex gap-1">
             <button
               type="button"
               onClick={() => setMode('phone')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-lg transition-all ${
-                mode === 'phone'
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'phone'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -205,11 +185,10 @@ export default function ForgotPasswordPage() {
             <button
               type="button"
               onClick={() => setMode('email')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-lg transition-all ${
-                mode === 'email'
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'email'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

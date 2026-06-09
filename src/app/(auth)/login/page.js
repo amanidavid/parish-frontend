@@ -53,15 +53,22 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        if (data?.errors) setFieldErrors(data.errors);
-        setError(data?.message);
+        const authErrors = data?.errors?.auth;
+        if (authErrors?.length) {
+          setError(authErrors[0]);
+        } else if (data?.errors) {
+          setFieldErrors(data.errors);
+          setError(data?.message);
+        } else {
+          setError(data?.message);
+        }
         return;
       }
       const challengeId = data?.data?.challenge_id;
       if (challengeId) {
         router.push(`/verify-otp?cid=${challengeId}`);
       } else {
-        setError(data?.message);
+        setError(data?.message || 'Unexpected response');
       }
     } catch {
       setError('Network error');
@@ -93,8 +100,8 @@ export default function LoginPage() {
             type="button"
             onClick={() => setMode('phone')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'phone'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
               }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,8 +114,8 @@ export default function LoginPage() {
             type="button"
             onClick={() => setMode('email')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'email'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
               }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
