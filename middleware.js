@@ -2,11 +2,16 @@ import { NextResponse } from 'next/server';
 
 const PUBLIC_PATHS = ['/login', '/register', '/verify-otp', '/forgot-password', '/reset-password'];
 
+function isPublicPath(pathname) {
+  if (pathname === '/') return true;
+  return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+}
+
 export function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('app_token')?.value;
 
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublic = isPublicPath(pathname);
   const isApiRoute = pathname.startsWith('/api/');
 
   if (isApiRoute) return NextResponse.next();
