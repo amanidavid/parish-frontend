@@ -195,7 +195,7 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
               {userName ? `Welcome, ${userName.split(' ')[0]}!` : 'Welcome!'}
             </h2>
             <p className="text-indigo-200 text-xs mt-1">
-              Each workspace represents one property. Fill in your property details below.
+              Please fill in the details of your property to proceed 
             </p>
           </div>
         </div>
@@ -262,7 +262,7 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
                 </select>
               </Field>
 
-              <Field label="District" error={errors?.district_uuid?.[0]} hint="Country and region are derived from the selected district when the property is saved.">
+              <Field label="District" error={errors?.district_uuid?.[0]} hint="">
                 <select name="district_uuid" className="input" value={form.district_uuid}
                   onChange={handleDistrictChange} disabled={!form.region_uuid || districtsLoading}>
                   <option value="">{!form.region_uuid ? 'Select region first' : districtsLoading ? 'Loading...' : 'Select district (optional)'}</option>
@@ -270,7 +270,7 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
                 </select>
               </Field>
 
-              <Field label="Ward" error={errors?.ward_uuid?.[0]} hint="Neighbourhood / sub-district area">
+              <Field label="Ward" error={errors?.ward_uuid?.[0]} hint="">
                 <select name="ward_uuid" className="input" value={form.ward_uuid}
                   onChange={handleChange} disabled={!form.district_uuid || wardsLoading}>
                   <option value="">{!form.district_uuid ? 'Select district first' : wardsLoading ? 'Loading...' : 'Select ward (optional)'}</option>
@@ -278,7 +278,7 @@ export default function WelcomeModal({ open, userName, onCreated, onSkip }) {
                 </select>
               </Field>
 
-              <Field label="Address / Location" error={errors?.address_line?.[0]} hint="Street address or area">
+              <Field label="Address / Location" error={errors?.address_line?.[0]} hint="">
                 <input name="address_line" type="text" className="input"
                   placeholder="e.g. 123 Main Street"
                   value={form.address_line} onChange={handleChange} />

@@ -454,7 +454,7 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
             <input
               name="start_date"
               type="date"
-              className="input text-sm"
+              className="input text-sm appearance-none min-h-[2.5rem]"
               value={form.start_date}
               onChange={change}
               required
@@ -468,7 +468,7 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
             <input
               name="end_date"
               type="date"
-              className="input text-sm"
+              className="input text-sm appearance-none min-h-[2.5rem]"
               value={form.end_date}
               onChange={change}
             />

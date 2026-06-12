@@ -82,9 +82,9 @@ function VerifyOtpForm() {
         inputRefs.current[0]?.focus();
         return;
       }
-      const { access_token, user, tenants } = data?.data || {};
+      const { user, tenants } = data?.data || {};
       const activeTenant = (tenants || []).find((t) => t.provisioning_status === 'completed') || tenants?.[0];
-      setAuth(user, access_token, activeTenant?.tenant_uuid || null);
+      setAuth(user, activeTenant?.tenant_uuid || null);
       if (fromRegister) setNewUser(true);
       router.push('/dashboard');
     } catch {

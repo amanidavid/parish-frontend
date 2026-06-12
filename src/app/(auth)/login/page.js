@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import CountryCodePicker from '@/components/ui/CountryCodePicker';
 import { DEFAULT_COUNTRY } from '@/constants/countryCodes';
+import useAuthStore from '@/store/authStore';
 
 function Spinner() {
   return (
@@ -23,6 +24,7 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const handleChange = useCallback((e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -64,10 +66,11 @@ export default function LoginPage() {
         }
         return;
       }
-      const challengeId = data?.data?.challenge_id;
-      if (challengeId) {
-        sessionStorage.setItem('last_auth_attempt', JSON.stringify({ payload }));
-        router.push(`/verify-otp?cid=${challengeId}`);
+      const { user, tenant, tenants } = data?.data || {};
+      if (user) {
+        const tenantUuid = tenant?.tenant_uuid || tenants?.[0]?.tenant_uuid || null;
+        setAuth(user, tenantUuid);
+        router.push('/dashboard');
       } else {
         setError(data?.message || 'Unexpected response');
       }

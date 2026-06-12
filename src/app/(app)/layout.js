@@ -91,7 +91,7 @@ export default function AppLayout({ children }) {
         setProvisioningStatus(null);
         setPermissions(tu.permissions || []);
         setRoles((tu.roles || []).map((r) => (typeof r === 'string' ? r : r.name)));
-        setAuth(tu, useAuthStore.getState().token, useAuthStore.getState().tenantUuid);
+        setAuth(tu, useAuthStore.getState().tenantUuid);
       }
     };
 

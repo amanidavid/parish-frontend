@@ -20,7 +20,7 @@ const KpiCard = React.memo(function KpiCard({ label, value, subtext, accent }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-5">
       <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</p>
-      <p className={`text-2xl font-bold mt-2 ${accent}`}>{value}</p>
+      <p className={`text-lg sm:text-2xl font-bold mt-2 break-words ${accent}`}>{value}</p>
       {subtext && <p className="text-xs text-gray-400 mt-1">{subtext}</p>}
     </div>
   );
