@@ -388,4 +388,29 @@
     font-weight: 500;
     color: #a16207;
   }
+
+  /* ─── Responsive table scroll wrapper ────────────────────── */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-responsive::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .table-responsive::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 3px;
+  }
+
+  /* ─── Normalize date inputs ────────────────────────────── */
+  input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+  }
 }

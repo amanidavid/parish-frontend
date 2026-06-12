@@ -6,6 +6,7 @@ import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import Pagination from '@/components/ui/Pagination';
 import useConfirmModal from '@/hooks/useConfirmModal';
+import useUiStore from '@/store/uiStore';
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -103,8 +104,16 @@ export default function MaintenanceJobDetailClient({ uuid }) {
     if (res?.success) {
       setModal({ open: false, mode: 'create', expense: null });
       loadExpenses(expensesPage);
+      useUiStore.getState().showModal({
+        type: 'success',
+        message: res?.message || (modal.mode === 'create' ? 'Expense added successfully.' : 'Expense updated successfully.'),
+      });
     } else {
       setErrors(res?.errors ?? { title: res?.message ?? 'Something went wrong' });
+      useUiStore.getState().showModal({
+        type: 'error',
+        message: res?.message || (modal.mode === 'create' ? 'Failed to add expense.' : 'Failed to update expense.'),
+      });
     }
   }, [form, modal, uuid, expensesPage, loadExpenses]);
 
@@ -115,6 +124,9 @@ export default function MaintenanceJobDetailClient({ uuid }) {
     );
     if (res?.success) {
       loadExpenses(expensesPage);
+      useUiStore.getState().showModal({ type: 'success', message: 'Expense deleted successfully.' });
+    } else {
+      useUiStore.getState().showModal({ type: 'error', message: res?.message || 'Failed to delete expense.' });
     }
   }, [confirmModal, expensesPage, loadExpenses]);
 
@@ -139,7 +151,7 @@ export default function MaintenanceJobDetailClient({ uuid }) {
             <>
               <h1 className="text-base font-bold text-gray-900">{job?.title ?? 'Job Detail'}</h1>
               <p className="text-sm text-gray-400 mt-0.5">
-                {job?.property_name ? `${job.property_name} · ` : ''}{fmtDate(job?.reported_date)}
+                {job?.property?.name ? `${job.property.name} · ` : ''}{fmtDate(job?.reported_date)}
               </p>
             </>
           )}
@@ -156,7 +168,7 @@ export default function MaintenanceJobDetailClient({ uuid }) {
           </div>
           <div>
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Property</p>
-            <p className="text-sm font-semibold text-gray-900">{job.property_name || '—'}</p>
+            <p className="text-sm font-semibold text-gray-900">{job.property?.name || '—'}</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Reported Date</p>
@@ -173,7 +185,7 @@ export default function MaintenanceJobDetailClient({ uuid }) {
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Expenses</h2>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <table className="w-full text-sm border-collapse">
+          <div className="table-responsive"><table className="w-full text-sm border-collapse min-w-[500px]">
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Title</th>
@@ -213,7 +225,7 @@ export default function MaintenanceJobDetailClient({ uuid }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
           {expensesMeta && expensesMeta.last_page > 1 && (
             <Pagination meta={expensesMeta} onPageChange={handlePage} />
           )}

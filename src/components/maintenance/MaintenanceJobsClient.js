@@ -9,6 +9,7 @@ import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import Pagination from '@/components/ui/Pagination';
 import useConfirmModal from '@/hooks/useConfirmModal';
+import useUiStore from '@/store/uiStore';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtAmt(n) {
@@ -56,7 +57,7 @@ function SummaryCards({ totals, loading }) {
           {loading ? (
             <div className="h-6 bg-gray-100 rounded animate-pulse w-16 mb-1" />
           ) : (
-            <p className={`text-xl font-bold ${c.color}`}>{typeof c.value === 'number' ? c.value.toLocaleString() : c.value}</p>
+            <p className={`text-lg sm:text-xl font-bold break-words ${c.color}`}>{typeof c.value === 'number' ? c.value.toLocaleString() : c.value}</p>
           )}
           <p className="text-xs text-gray-400 mt-0.5">{c.label}</p>
         </div>
@@ -91,7 +92,7 @@ function ByPropertyTab({ startDate, endDate }) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <table className="w-full text-sm border-collapse">
+      <div className="table-responsive"><table className="w-full text-sm border-collapse min-w-[500px]">
         <thead>
           <tr className="border-b border-gray-100">
             <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Property</th>
@@ -127,7 +128,7 @@ function ByPropertyTab({ startDate, endDate }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
       {meta && meta.last_page > 1 && <Pagination meta={meta} onPageChange={handlePage} />}
     </div>
   );
@@ -177,7 +178,7 @@ function RecentExpensesTab({ startDate, endDate }) {
           className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500" />
       </div>
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-sm border-collapse">
+        <div className="table-responsive"><table className="w-full text-sm border-collapse min-w-[500px]">
           <thead>
             <tr className="border-b border-gray-100">
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Expense</th>
@@ -219,7 +220,7 @@ function RecentExpensesTab({ startDate, endDate }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
         {meta && meta.last_page > 1 && <Pagination meta={meta} onPageChange={handlePage} />}
       </div>
     </div>
@@ -359,8 +360,16 @@ function JobsTab({ startDate, endDate }) {
     if (res?.success) {
       setModal({ open: false, mode: 'create', job: null });
       loadJobs(page, search);
+      useUiStore.getState().showModal({
+        type: 'success',
+        message: res?.message || (modal.mode === 'create' ? 'Job created successfully.' : 'Job updated successfully.'),
+      });
     } else {
       setErrors(res?.errors ?? { title: res?.message ?? 'Something went wrong' });
+      useUiStore.getState().showModal({
+        type: 'error',
+        message: res?.message || (modal.mode === 'create' ? 'Failed to create job.' : 'Failed to update job.'),
+      });
     }
   }, [form, modal, page, search, loadJobs]);
 
@@ -371,6 +380,9 @@ function JobsTab({ startDate, endDate }) {
     );
     if (res?.success) {
       loadJobs(page, search);
+      useUiStore.getState().showModal({ type: 'success', message: 'Job deleted successfully.' });
+    } else {
+      useUiStore.getState().showModal({ type: 'error', message: res?.message || 'Failed to delete job.' });
     }
   }, [confirmModal, page, search, loadJobs]);
 
@@ -387,7 +399,7 @@ function JobsTab({ startDate, endDate }) {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-sm border-collapse">
+        <div className="table-responsive"><table className="w-full text-sm border-collapse min-w-[500px]">
           <thead>
             <tr className="border-b border-gray-100">
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Job</th>
@@ -430,7 +442,7 @@ function JobsTab({ startDate, endDate }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
         {meta && meta.last_page > 1 && <Pagination meta={meta} onPageChange={handlePage} />}
       </div>
 
