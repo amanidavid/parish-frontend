@@ -8,6 +8,7 @@ const CustomerService = {
     if (params.search) query.set('search', params.search);
     if (params.customerType) query.set('customer_type', params.customerType);
     if (params.status) query.set('status', params.status);
+    if (params.propertyUuid) query.set('property_uuid', params.propertyUuid);
     if (params.page && params.page > 1) query.set('page', params.page);
     return apiFetch(`${BASE}?${query}`);
   },

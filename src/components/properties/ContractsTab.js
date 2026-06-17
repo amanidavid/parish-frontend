@@ -15,11 +15,11 @@ const BTN = {
 };
 
 const CONTRACT_STATUS = {
-  draft: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600' },
-  active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700' },
-  expired: { label: 'Expired', bg: 'bg-orange-50', text: 'text-orange-700' },
-  terminated: { label: 'Terminated', bg: 'bg-red-50', text: 'text-red-700' },
-  renewed: { label: 'Renewed', bg: 'bg-blue-50', text: 'text-blue-700' },
+  draft: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600', color: '#6b7280' },
+  active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700', color: '#22c55e' },
+  expired: { label: 'Expired', bg: 'bg-orange-50', text: 'text-orange-700', color: '#f97316' },
+  terminated: { label: 'Terminated', bg: 'bg-red-50', text: 'text-red-700', color: '#ef4444' },
+  renewed: { label: 'Renewed', bg: 'bg-blue-50', text: 'text-blue-700', color: '#3b82f6' },
 };
 
 const BILLING_CYCLES = [

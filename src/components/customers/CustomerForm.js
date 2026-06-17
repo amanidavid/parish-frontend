@@ -6,7 +6,7 @@ function FieldError({ message }) {
   return <p className="mt-1 text-xs text-red-600">{message}</p>;
 }
 
-export default function CustomerForm({ onSubmit, loading, submitLabel, initial }) {
+export default function CustomerForm({ onSubmit, loading, submitLabel, initial, propertyUuid = '' }) {
   const [form, setForm] = useState({
     customer_type: 'individual',
     display_name: '',
@@ -61,6 +61,7 @@ export default function CustomerForm({ onSubmit, loading, submitLabel, initial }
       phone: form.phone.trim() || null,
       status: form.status,
       notes: form.notes.trim() || null,
+      ...(propertyUuid ? { property_uuid: propertyUuid } : {}),
     };
 
     if (isBusiness) {
@@ -92,11 +93,10 @@ export default function CustomerForm({ onSubmit, loading, submitLabel, initial }
               key={opt.value}
               type="button"
               onClick={() => setForm((p) => ({ ...p, customer_type: opt.value }))}
-              className={`h-9 px-4 rounded text-sm font-medium border transition-all ${
-                form.customer_type === opt.value
-                  ? 'bg-primary-50 border-primary-200 text-primary-700'
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-              }`}
+              className={`h-9 px-4 rounded text-sm font-medium border transition-all ${form.customer_type === opt.value
+                ? 'bg-primary-50 border-primary-200 text-primary-700'
+                : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
             >
               {opt.label}
             </button>
