@@ -457,12 +457,12 @@ export default function FloorsWorkspace({ propertyUuid }) {
 
   /* ── Permission guards ── */
   const canCreateFloor = useCan('property_floors.create');
-  const canEditFloor = useCan('property_floors.edit');
+  const canEditFloor = useCan('property_floors.update');
   const canDeleteFloor = useCan('property_floors.delete');
-  const canCreateUnit = useCan('property_units.create');
-  const canEditUnit = useCan('property_units.edit');
-  const canDeleteUnit = useCan('property_units.delete');
-  const canCreateContract = useCan('customer_contracts.create');
+  const canCreateUnit = useCan('units.create');
+  const canEditUnit = useCan('units.update');
+  const canDeleteUnit = useCan('units.delete');
+  const canCreateContract = useCan(['customer_contracts.create', 'contract.create', 'contracts.create'], 'any');
 
   const abortRef = useRef(null);
 

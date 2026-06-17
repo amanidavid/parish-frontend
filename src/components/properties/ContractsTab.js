@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useConfirmModal from '@/hooks/useConfirmModal';
 import useUiStore from '@/store/uiStore';
+import useCan from '@/hooks/useCan';
 
 const BTN = {
   gray: 'h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors',
@@ -557,6 +558,10 @@ export default function ContractsTab({ propertyUuid }) {
   const confirmModal = useConfirmModal();
   const searchRef = useRef(null);
 
+  const canCreate = useCan(['customer_contracts.create', 'contract.create', 'contracts.create'], 'any');
+  const canEdit = useCan(['customer_contracts.edit', 'contract.update', 'contracts.edit'], 'any');
+  const canDelete = useCan(['customer_contracts.delete', 'contract.delete', 'contracts.delete'], 'any');
+
   const loadContracts = useCallback(() => {
     setLoading(true);
     ContractService.list({
@@ -656,12 +661,14 @@ export default function ContractsTab({ propertyUuid }) {
             ))}
           </select>
         </div>
-        <button className="btn-primary text-sm" onClick={() => setContractModal('new')}>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New Contract
-        </button>
+        {canCreate && (
+          <button className="btn-primary text-sm" onClick={() => setContractModal('new')}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Contract
+          </button>
+        )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -719,8 +726,8 @@ export default function ContractsTab({ propertyUuid }) {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button className={BTN.gray} onClick={() => setContractModal(c)}>Edit</button>
-                        <button className={BTN.red} onClick={() => confirmModal.prompt(c)}>Delete</button>
+                        {canEdit && <button className={BTN.gray} onClick={() => setContractModal(c)}>Edit</button>}
+                        {canDelete && <button className={BTN.red} onClick={() => confirmModal.prompt(c)}>Delete</button>}
                       </div>
                     </td>
                   </tr>

@@ -125,7 +125,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
    */
   /* Permission guard for tabs */
   const canViewFloors = useCan('property_floors.view');
-  const canViewContracts = useCan('customer_contracts.view');
+  const canViewContracts = useCan(['customer_contracts.view', 'contract.view', 'contracts.view'], 'any');
   const canViewCustomers = useCan('customers.view');
 
   const permissionMap = {

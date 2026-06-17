@@ -17,7 +17,7 @@ export const CustomersTab = dynamic(() => import('@/components/properties/Custom
 export const PROPERTY_TABS = [
   { id: 'overview', label: 'Overview', lazy: false },
   { id: 'floors', label: 'Floors', lazy: true, permission: 'property_floors.view' },
-  { id: 'contracts', label: 'Contracts', lazy: true, permission: 'customer_contracts.view' },
+  { id: 'contracts', label: 'Contracts', lazy: true, permission: ['customer_contracts.view', 'contract.view', 'contracts.view'] },
   { id: 'customers', label: 'Customers', lazy: true, permission: 'customers.view' },
 ];
 
