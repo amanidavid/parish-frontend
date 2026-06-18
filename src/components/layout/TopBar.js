@@ -64,7 +64,7 @@ export default function TopBar() {
     router.push('/login');
   }, [clearAuth, router]);
 
-  const handleChangePasswordClick = useCallback(() => {
+  const handleViewProfileClick = useCallback(() => {
     setUserMenuOpen(false);
     setChangePasswordOpen(true);
   }, []);
@@ -193,13 +193,13 @@ export default function TopBar() {
                 {/* Menu items */}
                 <div className="py-1">
                   <button
-                    onClick={handleChangePasswordClick}
+                    onClick={handleViewProfileClick}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
-                    Change Password
+                    View Profile
                   </button>
                 </div>
                 <div className="border-t border-gray-100">

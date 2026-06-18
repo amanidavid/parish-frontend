@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PropertyService from '@/services/PropertyService';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import PropertyFormModal from '@/components/properties/PropertyFormModal';
 import {
   PROPERTY_TABS,
   DEFAULT_TAB,
@@ -119,6 +120,10 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   const [tab, setTab] = useState(initialTab);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [formModalOpen, setFormModalOpen] = useState(false);
+
+  const canEdit = useCan('properties.edit');
+  const canDelete = useCan('properties.delete');
 
   /*
    * mountedTabs tracks which tab components have been opened at least once.
@@ -247,6 +252,32 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
         </Link>
       </div>
 
+      {/* ── Header Actions ───────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2">
+        {canEdit && (
+          <button
+            onClick={() => setFormModalOpen(true)}
+            className="btn-secondary text-sm flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit
+          </button>
+        )}
+        {canDelete && (
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete
+          </button>
+        )}
+      </div>
+
       {/* ── Pill-style Tab Bar ─────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2">
         {visibleTabs.map((t) => {
@@ -368,6 +399,22 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
           <ReportsTab propertyUuid={uuid} />
         </div>
       )}
+
+      <PropertyFormModal
+        open={formModalOpen}
+        onClose={() => setFormModalOpen(false)}
+        initial={property}
+        onSaved={(updated) => {
+          if (updated) setProperty(updated);
+          else {
+            PropertyService.show(uuid)
+              .then((data) => {
+                if (data?.success && data?.data) setProperty(data.data);
+              })
+              .catch(() => { });
+          }
+        }}
+      />
 
       <ConfirmModal
         open={deleteOpen}
