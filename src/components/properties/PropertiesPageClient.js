@@ -42,7 +42,6 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
   const searchRef = useRef(null);
 
   const canCreate = useCan('properties.create');
-  const canEdit = useCan('properties.edit');
   const canDelete = useCan('properties.delete');
   const hydratedInitialRef = useRef(Boolean(initialMeta) && !initialError);
 
@@ -246,14 +245,15 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
                         >
                           View
                         </Link>
-                        {canEdit && (
-                          <button
-                            onClick={() => { setEditProperty(prop); setFormModalOpen(true); }}
-                            className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-                          >
-                            Edit
-                          </button>
-                        )}
+                        <button
+                          onClick={() => { setEditProperty(prop); setFormModalOpen(true); }}
+                          className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit
+                        </button>
                         {canDelete && (
                           <button
                             onClick={() => confirmModal.prompt(prop)}
