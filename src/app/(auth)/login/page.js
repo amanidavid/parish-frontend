@@ -171,10 +171,7 @@ export default function LoginPage() {
         )}
 
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="label mb-0" htmlFor="password">Password</label>
-            <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline">Forgot password?</Link>
-          </div>
+          <label className="label mb-1" htmlFor="password">Password</label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,6 +190,9 @@ export default function LoginPage() {
             </button>
           </div>
           {fieldErrors?.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password[0]}</p>}
+          <div className="mt-1.5 text-right">
+            <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline">Forgot password?</Link>
+          </div>
         </div>
 
         <button type="submit"
