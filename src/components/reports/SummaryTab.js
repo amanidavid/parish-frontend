@@ -1,5 +1,5 @@
 'use client';
-import React, { useMemo } from 'react';
+import React from 'react';
 
 const currencyFmt = new Intl.NumberFormat('en-TZ', {
   style: 'currency',
@@ -59,18 +59,15 @@ function SummaryTab({ data }) {
   const totals = data?.totals;
   const byStatus = data?.by_status || [];
 
-  const kpiCards = useMemo(() => {
-    if (!totals) return null;
-    return [
-      { label: 'Total Contracts', value: totals.contracts_count, subtext: 'Across all properties', accent: 'text-gray-900' },
-      { label: 'Total Amount', value: formatCurrency(totals.total_contract_amount), subtext: 'Cumulative contract value', accent: 'text-primary-700' },
-      { label: 'Active Contracts', value: totals.active_contracts_count, subtext: formatCurrency(totals.active_contract_amount), accent: 'text-emerald-700' },
-      { label: 'Draft', value: totals.draft_contracts_count, subtext: 'Pending activation', accent: 'text-gray-600' },
-      { label: 'Expired', value: totals.expired_contracts_count, subtext: 'Ended contracts', accent: 'text-red-700' },
-      { label: 'Terminated', value: totals.terminated_contracts_count, subtext: 'Cancelled early', accent: 'text-orange-700' },
-      { label: 'Renewed', value: totals.renewed_contracts_count, subtext: 'Extended contracts', accent: 'text-blue-700' },
-    ];
-  }, [totals]);
+  const kpiCards = totals ? [
+    { label: 'Total Contracts', value: totals.contracts_count, subtext: 'Across all properties', accent: 'text-gray-900' },
+    { label: 'Total Amount', value: formatCurrency(totals.total_contract_amount), subtext: 'Cumulative contract value', accent: 'text-primary-700' },
+    { label: 'Active Contracts', value: totals.active_contracts_count, subtext: formatCurrency(totals.active_contract_amount), accent: 'text-emerald-700' },
+    { label: 'Draft', value: totals.draft_contracts_count, subtext: 'Pending activation', accent: 'text-gray-600' },
+    { label: 'Expired', value: totals.expired_contracts_count, subtext: 'Ended contracts', accent: 'text-red-700' },
+    { label: 'Terminated', value: totals.terminated_contracts_count, subtext: 'Cancelled early', accent: 'text-orange-700' },
+    { label: 'Renewed', value: totals.renewed_contracts_count, subtext: 'Extended contracts', accent: 'text-blue-700' },
+  ] : null;
 
   if (!data) {
     return (

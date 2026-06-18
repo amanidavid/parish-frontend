@@ -6,6 +6,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useConfirmModal from '@/hooks/useConfirmModal';
+import PropertyFormModal from './PropertyFormModal';
 import useCan from '@/hooks/useCan';
 
 const PER_PAGE = 15;
@@ -36,6 +37,8 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
   const [appliedSearch, setAppliedSearch] = useState('');
   const [page, setPage] = useState(initialMeta?.current_page ?? 1);
   const confirmModal = useConfirmModal();
+  const [formModalOpen, setFormModalOpen] = useState(false);
+  const [editProperty, setEditProperty] = useState(null);
   const searchRef = useRef(null);
 
   const canCreate = useCan('properties.create');
@@ -105,12 +108,15 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
           <p className="text-sm text-gray-400 mt-0.5">Manage all registered properties</p>
         </div>
         {canCreate && (
-          <Link href="/properties/create" className="btn-primary">
+          <button
+            onClick={() => { setEditProperty(null); setFormModalOpen(true); }}
+            className="btn-primary"
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             New Property
-          </Link>
+          </button>
         )}
       </div>
 
@@ -241,12 +247,12 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
                           View
                         </Link>
                         {canEdit && (
-                          <Link
-                            href={`/properties/${prop.uuid}/edit`}
+                          <button
+                            onClick={() => { setEditProperty(prop); setFormModalOpen(true); }}
                             className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                           >
                             Edit
-                          </Link>
+                          </button>
                         )}
                         {canDelete && (
                           <button
@@ -283,6 +289,16 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
         title="Delete Property"
         message={`Delete "${confirmModal.item?.name}"? All associated floors and units will also be removed. This cannot be undone.`}
         confirmLabel="Delete Property"
+      />
+
+      <PropertyFormModal
+        open={formModalOpen}
+        onClose={() => setFormModalOpen(false)}
+        initial={editProperty}
+        onSaved={() => {
+          hydratedInitialRef.current = false;
+          fetchProperties();
+        }}
       />
     </div>
   );

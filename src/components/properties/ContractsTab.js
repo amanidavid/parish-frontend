@@ -559,7 +559,7 @@ export default function ContractsTab({ propertyUuid }) {
   const searchRef = useRef(null);
 
   const canCreate = useCan(['customer_contracts.create', 'contract.create', 'contracts.create'], 'any');
-  const canEdit = useCan(['customer_contracts.edit', 'contract.update', 'contracts.edit'], 'any');
+  const canEdit = useCan(['customer_contracts.update', 'contract.update', 'contracts.edit'], 'any');
   const canDelete = useCan(['customer_contracts.delete', 'contract.delete', 'contracts.delete'], 'any');
 
   const loadContracts = useCallback(() => {

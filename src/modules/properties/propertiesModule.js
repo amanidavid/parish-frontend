@@ -12,6 +12,8 @@ import dynamic from 'next/dynamic';
 export const FloorsTab = dynamic(() => import('@/components/properties/FloorsWorkspace'));
 export const ContractsTab = dynamic(() => import('@/components/properties/ContractsTab'));
 export const CustomersTab = dynamic(() => import('@/components/properties/CustomersTab'));
+export const MaintenanceTab = dynamic(() => import('@/components/properties/MaintenanceTab'));
+export const ReportsTab = dynamic(() => import('@/components/properties/ReportsTab'));
 
 /* ── Tab definitions ───────────────────────────────────────────────── */
 export const PROPERTY_TABS = [
@@ -19,6 +21,8 @@ export const PROPERTY_TABS = [
   { id: 'floors', label: 'Floors', lazy: true, permission: 'property_floors.view' },
   { id: 'contracts', label: 'Contracts', lazy: true, permission: ['customer_contracts.view', 'contract.view', 'contracts.view'] },
   { id: 'customers', label: 'Customers', lazy: true, permission: 'customers.view' },
+  { id: 'maintenance', label: 'Maintenance', lazy: true, permission: 'maintenance_jobs.view' },
+  { id: 'reports', label: 'Reports', lazy: true, permission: 'reports.view' },
 ];
 
 export const DEFAULT_TAB = 'overview';
@@ -30,6 +34,8 @@ const TAB_COMPONENTS = {
   floors: FloorsTab,
   contracts: ContractsTab,
   customers: CustomersTab,
+  maintenance: MaintenanceTab,
+  reports: ReportsTab,
 };
 
 /**

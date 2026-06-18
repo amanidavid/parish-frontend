@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import MaintenanceService from '@/services/MaintenanceService';
 import PropertyService from '@/services/PropertyService';
 import FloorService from '@/services/FloorService';
@@ -209,7 +210,7 @@ function RecentExpensesTab({ startDate, endDate }) {
                 </td>
                 <td className="px-4 py-3">
                   {row.maintenance_job?.uuid ? (
-                    <Link href={`/maintenance/${row.maintenance_job.uuid}`} className="text-sm text-primary-600 hover:underline font-medium">
+                    <Link href={`/maintenance/${row.maintenance_job.uuid}?return_to=${encodeURIComponent('/maintenance')}`} className="text-sm text-primary-600 hover:underline font-medium">
                       {row.maintenance_job.title}
                     </Link>
                   ) : '—'}
@@ -423,7 +424,7 @@ function JobsTab({ startDate, endDate }) {
             {!loading && jobs.map((job) => (
               <tr key={job.uuid} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
-                  <Link href={`/maintenance/${job.uuid}`} className="font-medium text-gray-900 hover:text-primary-600 transition-colors">
+                  <Link href={`/maintenance/${job.uuid}?return_to=${encodeURIComponent('/maintenance')}`} className="font-medium text-gray-900 hover:text-primary-600 transition-colors">
                     {job.title}
                   </Link>
                   {job.description && (
@@ -434,7 +435,7 @@ function JobsTab({ startDate, endDate }) {
                 <td className="px-4 py-3 text-gray-500 text-sm">{fmtDate(job.reported_date)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">
-                    <Link href={`/maintenance/${job.uuid}`} className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors">View</Link>
+                    <Link href={`/maintenance/${job.uuid}?return_to=${encodeURIComponent('/maintenance')}`} className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors">View</Link>
                     <button onClick={() => openEdit(job)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">Edit</button>
                     <button onClick={() => confirmModal.prompt(job)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button>
                   </div>
@@ -526,6 +527,7 @@ const TABS = [
 ];
 
 export default function MaintenanceJobsClient() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('jobs');
   const [totals, setTotals] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -549,6 +551,16 @@ export default function MaintenanceJobsClient() {
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
+          <button
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-2"
+            title="Go back"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
           <h1 className="text-base font-bold text-gray-900">Maintenance</h1>
           <p className="text-sm text-gray-400 mt-0.5">Manage maintenance jobs and expenses</p>
         </div>

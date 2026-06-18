@@ -11,6 +11,8 @@ import {
   FloorsTab,
   ContractsTab,
   CustomersTab,
+  MaintenanceTab,
+  ReportsTab,
 } from '@/modules/properties/propertiesModule';
 import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
@@ -127,16 +129,20 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   const canViewFloors = useCan('property_floors.view');
   const canViewContracts = useCan(['customer_contracts.view', 'contract.view', 'contracts.view'], 'any');
   const canViewCustomers = useCan('customers.view');
+  const canViewMaintenance = useCan('maintenance_jobs.view');
+  const canViewReports = useCan('reports.view');
 
   const permissionMap = {
     floors: canViewFloors,
     contracts: canViewContracts,
     customers: canViewCustomers,
+    maintenance: canViewMaintenance,
+    reports: canViewReports,
   };
 
   const visibleTabs = useMemo(() =>
     PROPERTY_TABS.filter((t) => !t.permission || permissionMap[t.id]),
-    [canViewFloors, canViewContracts, canViewCustomers]
+    [canViewFloors, canViewContracts, canViewCustomers, canViewMaintenance, canViewReports]
   );
 
   /* Ensure active tab is visible; fallback if permission revoked */
@@ -346,6 +352,20 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
       {mountedTabs.has('customers') && (
         <div className={tab !== 'customers' ? 'hidden' : ''}>
           <CustomersTab propertyUuid={uuid} />
+        </div>
+      )}
+
+      {/* Maintenance tab */}
+      {mountedTabs.has('maintenance') && (
+        <div className={tab !== 'maintenance' ? 'hidden' : ''}>
+          <MaintenanceTab propertyUuid={uuid} />
+        </div>
+      )}
+
+      {/* Reports tab */}
+      {mountedTabs.has('reports') && (
+        <div className={tab !== 'reports' ? 'hidden' : ''}>
+          <ReportsTab propertyUuid={uuid} />
         </div>
       )}
 

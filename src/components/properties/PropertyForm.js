@@ -42,27 +42,28 @@ function Spinner() {
 
 export default function PropertyForm({ initial = {}, onSubmit, loading, submitLabel = 'Save' }) {
   const router = useRouter();
+  const init = initial || {}; // guard against null
 
-  const initCountryUuid = initial.location?.country?.uuid || '';
-  const initRegionRef = useRef(initial.location?.region?.uuid || '');
-  const initDistrictRef = useRef(initial.location?.district?.uuid || '');
+  const initCountryUuid = init.location?.country?.uuid || '';
+  const initRegionRef = useRef(init.location?.region?.uuid || '');
+  const initDistrictRef = useRef(init.location?.district?.uuid || '');
 
   const [form, setForm] = useState({
-    name: initial.name || '',
-    type_uuid: initial.type?.uuid || '',
-    address_line: initial.address_line || '',
+    name: init.name || '',
+    type_uuid: init.type?.uuid || '',
+    address_line: init.address_line || '',
     country_uuid: initCountryUuid,
     region_uuid: initRegionRef.current,
     district_uuid: initDistrictRef.current,
-    ward_uuid: initial.location?.ward?.uuid || '',
+    ward_uuid: init.location?.ward?.uuid || '',
   });
 
   const [fieldErrors, setFieldErrors] = useState({});
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [typesLoading, setTypesLoading] = useState(true);
 
-  const [countrySearch, setCountrySearch] = useState(initial.location?.country?.name || '');
-  const [selectedCountry, setSelectedCountry] = useState(initial.location?.country || null);
+  const [countrySearch, setCountrySearch] = useState(init.location?.country?.name || '');
+  const [selectedCountry, setSelectedCountry] = useState(init.location?.country || null);
   const [countryResults, setCountryResults] = useState([]);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const countrySearchRef = useRef(null);
@@ -310,7 +311,6 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
           <Field
             label="District"
             error={fieldErrors?.district_uuid?.[0]}
-            hint="Country and region are derived from the selected district when the property is saved."
           >
             <select
               name="district_uuid"
@@ -331,7 +331,6 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
           <Field
             label="Ward"
             error={fieldErrors?.ward_uuid?.[0]}
-            hint="Neighbourhood / sub-district area"
           >
             <select
               name="ward_uuid"
@@ -349,7 +348,7 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
             </select>
           </Field>
 
-          <Field label="Address / Location" error={fieldErrors?.address_line?.[0]} hint="Street address or area">
+          <Field label="Address / Location" error={fieldErrors?.address_line?.[0]}>
             <input
               name="address_line"
               type="text"

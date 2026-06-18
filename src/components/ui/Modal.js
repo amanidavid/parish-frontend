@@ -1,21 +1,20 @@
 'use client';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function Modal({ open, onClose, title, children, maxWidth = 'max-w-lg' }) {
-  const handleKey = useCallback(
-    (e) => { if (e.key === 'Escape') onClose(); },
-    [onClose]
-  );
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
+    const handleKey = (e) => { if (e.key === 'Escape') onCloseRef.current(); };
     document.addEventListener('keydown', handleKey);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', handleKey);
       document.body.style.overflow = '';
     };
-  }, [open, handleKey]);
+  }, [open]);
 
   if (!open) return null;
 

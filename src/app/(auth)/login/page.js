@@ -66,11 +66,27 @@ export default function LoginPage() {
         }
         return;
       }
-      const { user, tenant, tenants } = data?.data || {};
+      const { user, tenant, tenants, services } = data?.data || {};
       if (user) {
         const tenantUuid = tenant?.tenant_uuid || tenants?.[0]?.tenant_uuid || null;
-        setAuth(user, tenantUuid);
-        router.push('/dashboard');
+        /* Use backend services if available; otherwise fall back to DEMO_SERVICES for testing */
+        const DEMO_SERVICES = [
+          { id: 'properties', label: 'Property Management', active: true },
+          /* { id: 'lodge', label: 'Lodge Management', active: true }, */
+          /* { id: 'restaurant', label: 'Restaurant POS', active: true }, */
+        ];
+        const userServices = services?.length > 0 ? services : DEMO_SERVICES;
+        /* Demo: toggle between 'full' and 'limited' to test both views */
+        const DEMO_SCOPE = 'full'; // change to 'limited' to test restricted view
+        const DEMO_ASSIGNMENTS = DEMO_SCOPE === 'limited'
+          ? { properties: ['prop-001', 'prop-002'] }
+          : {};
+        const scopedServices = DEMO_SCOPE === 'limited'
+          ? userServices.filter((s) => Object.keys(DEMO_ASSIGNMENTS).includes(s.id))
+          : userServices;
+        setAuth(user, tenantUuid, scopedServices, DEMO_SCOPE, DEMO_ASSIGNMENTS);
+        /* Live version: always land on properties page */
+        router.push('/properties');
       } else {
         setError(data?.message || 'Unexpected response');
       }

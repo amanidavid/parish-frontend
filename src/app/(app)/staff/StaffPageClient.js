@@ -1,9 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import StaffService from '@/services/StaffService';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import StaffFormModal from '@/components/staff/StaffFormModal';
 import useCan from '@/hooks/useCan';
 
 const PER_PAGE = 15;
@@ -41,6 +43,7 @@ const BTN = {
 };
 
 export default function StaffPageClient({ initialItems = [], initialMeta = null, initialError = null }) {
+  const router = useRouter();
   const [staff, setStaff] = useState(initialItems);
   const [meta, setMeta] = useState(initialMeta);
   const [loading, setLoading] = useState(!initialMeta && !initialError);
@@ -51,6 +54,8 @@ export default function StaffPageClient({ initialItems = [], initialMeta = null,
   const [page, setPage] = useState(initialMeta?.current_page ?? 1);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [formModalOpen, setFormModalOpen] = useState(false);
+  const [editMember, setEditMember] = useState(null);
   const searchRef = useRef(null);
   const hydratedInitialRef = useRef(Boolean(initialMeta) && !initialError);
 
@@ -123,10 +128,26 @@ export default function StaffPageClient({ initialItems = [], initialMeta = null,
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-base font-bold text-gray-900">Staff</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+              title="Go back"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          </div>
+          <h1 className="text-base font-bold text-gray-900 mt-2">Staff</h1>
           <p className="text-sm text-gray-400 mt-0.5">Manage workspace staff and their roles</p>
         </div>
-        {canManage && <Link href="/staff/create" className="btn-primary text-sm">New Staff</Link>}
+        {canManage && (
+          <button onClick={() => { setEditMember(null); setFormModalOpen(true); }} className="btn-primary text-sm">
+            New Staff
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -194,7 +215,8 @@ export default function StaffPageClient({ initialItems = [], initialMeta = null,
                 </td>
                 <td className="px-5 py-3.5 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    {canManage && <Link href={`/staff/${member.uuid}/edit`} className={BTN.gray}>Edit</Link>}
+                    <Link href={`/staff/${member.uuid}`} className={BTN.gray}>View</Link>
+                    {canManage && <button className={BTN.gray} onClick={() => { setEditMember(member); setFormModalOpen(true); }}>Edit</button>}
                     {canManage && <button className={BTN.red} onClick={() => setDeleteTarget(member)}>Delete</button>}
                   </div>
                 </td>
@@ -213,6 +235,16 @@ export default function StaffPageClient({ initialItems = [], initialMeta = null,
         title="Delete Staff"
         message={`Delete "${deleteTarget?.name}"? This will remove them from the workspace.`}
         confirmLabel="Delete Staff"
+      />
+
+      <StaffFormModal
+        open={formModalOpen}
+        onClose={() => setFormModalOpen(false)}
+        initial={editMember}
+        onSaved={() => {
+          hydratedInitialRef.current = false;
+          fetchStaff();
+        }}
       />
     </div>
   );

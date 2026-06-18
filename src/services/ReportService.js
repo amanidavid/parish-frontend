@@ -30,6 +30,12 @@ const ReportService = {
     const qs = buildQuery(filters);
     return apiFetch(`${BASE}/contracts/expiring?${qs}`, { signal });
   },
+
+  async contractCollectionsChart(params = {}) {
+    const { signal, ...filters } = params;
+    const qs = buildChartQuery(filters);
+    return apiFetch(`${BASE}/contracts/chart?${qs}`, { signal });
+  },
 };
 
 function buildQuery(filters) {
@@ -48,6 +54,25 @@ function buildQuery(filters) {
   append('sort', filters.sort);
   append('days', filters.days);
   append('page', filters.page);
+  return qs;
+}
+
+function buildChartQuery(filters) {
+  const qs = new URLSearchParams();
+  const append = (key, val) => {
+    if (val !== undefined && val !== null && val !== '') qs.append(key, val);
+  };
+  append('property_uuid', filters.propertyUuid);
+  append('billing_cycle', filters.billingCycle);
+  append('period', filters.period);
+  append('range', filters.range);
+  append('start_date', filters.startDate);
+  append('end_date', filters.endDate);
+  append('group_by', filters.groupBy);
+  append('metric', filters.metric);
+  if (Array.isArray(filters.recognizedStatuses) && filters.recognizedStatuses.length) {
+    filters.recognizedStatuses.forEach((s) => qs.append('recognized_statuses[]', s));
+  }
   return qs;
 }
 

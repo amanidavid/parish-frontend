@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import SubscriptionService from '@/services/SubscriptionService';
 import Pagination from '@/components/ui/Pagination';
 import StatusBadge from '@/components/ui/StatusBadge';
@@ -92,6 +93,7 @@ function SkeletonRow() {
 }
 
 export default function SubscriptionPageClient({ initialSummary = null, initialSummaryError = null }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('summary');
   const [summary, setSummary] = useState(initialSummary);
   const [summaryLoading, setSummaryLoading] = useState(!initialSummary && !initialSummaryError);
@@ -189,6 +191,16 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
     <div className="space-y-5">
       {/* Page header */}
       <div>
+        <button
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-2"
+          title="Go back"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
         <h1 className="text-xl font-bold text-gray-900">Subscription</h1>
         <p className="text-sm text-gray-400 mt-0.5">Workspace billing, plan details, and property cost breakdown</p>
       </div>

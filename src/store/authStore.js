@@ -10,12 +10,18 @@ const useAuthStore = create(
       isNewUser: false,
       permissions: [],
       roles: [],
-      setAuth: (user, tenantUuid) => set({ user, tenantUuid }),
+      services: [], // [{ id, label, active }]
+      scope: 'full', // 'full' | 'limited'
+      assignments: {}, // { properties: ['uuid'], lodge: ['uuid'] }
+      setAuth: (user, tenantUuid, services, scope = 'full', assignments = {}) =>
+        set({ user, tenantUuid, services: services || [], scope, assignments }),
       updateUser: (user) => set({ user }),
       setNewUser: (val) => set({ isNewUser: val }),
       setPermissions: (permissions) => set({ permissions }),
       setRoles: (roles) => set({ roles }),
-      clearAuth: () => set({ user: null, tenantUuid: null, isNewUser: false, permissions: [], roles: [] }),
+      setServices: (services) => set({ services }),
+      setScope: (scope, assignments = {}) => set({ scope, assignments }),
+      clearAuth: () => set({ user: null, tenantUuid: null, isNewUser: false, permissions: [], roles: [], services: [], scope: 'full', assignments: {} }),
       /* Check if user has a specific permission */
       can: (permissionName) => {
         const state = get();
@@ -30,6 +36,9 @@ const useAuthStore = create(
         tenantUuid: state.tenantUuid,
         permissions: state.permissions,
         roles: state.roles,
+        services: state.services,
+        scope: state.scope,
+        assignments: state.assignments,
       }),
     }
   )

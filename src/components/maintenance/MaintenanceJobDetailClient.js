@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import MaintenanceService from '@/services/MaintenanceService';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -26,6 +27,9 @@ function FormField({ label, children, error }) {
 const EMPTY_EXPENSE = { title: '', description: '', amount: '', expense_date: '' };
 
 export default function MaintenanceJobDetailClient({ uuid }) {
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('return_to') || '';
+
   const [job, setJob] = useState(null);
   const [jobLoading, setJobLoading] = useState(true);
 
@@ -139,7 +143,10 @@ export default function MaintenanceJobDetailClient({ uuid }) {
     <div className="space-y-5">
       {/* Back + header */}
       <div className="flex items-start gap-3">
-        <Link href="/maintenance" className="mt-0.5 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+        <Link
+          href={returnTo || (job?.property?.uuid ? `/properties/${job.property.uuid}?tab=maintenance` : '/maintenance')}
+          className="mt-0.5 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+        >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -159,32 +166,10 @@ export default function MaintenanceJobDetailClient({ uuid }) {
         <button onClick={openCreate} className="btn-primary text-sm py-2">+ Add Expense</button>
       </div>
 
-      {/* Job info card */}
-      {!jobLoading && job && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Title</p>
-            <p className="text-sm font-semibold text-gray-900">{job.title}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Property</p>
-            <p className="text-sm font-semibold text-gray-900">{job.property?.name || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Reported Date</p>
-            <p className="text-sm font-semibold text-gray-900">{fmtDate(job.reported_date)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Description</p>
-            <p className="text-sm text-gray-600">{job.description || '—'}</p>
-          </div>
-        </div>
-      )}
-
       {/* Expenses section */}
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Expenses</h2>
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white border border-gray-200 overflow-hidden">
           <div className="table-responsive"><table className="w-full text-sm border-collapse min-w-[500px]">
             <thead>
               <tr className="border-b border-gray-100">
