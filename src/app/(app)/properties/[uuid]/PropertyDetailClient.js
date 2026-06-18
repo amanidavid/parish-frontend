@@ -4,7 +4,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PropertyService from '@/services/PropertyService';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import PropertyFormModal from '@/components/properties/PropertyFormModal';
 import {
   PROPERTY_TABS,
   DEFAULT_TAB,
@@ -120,9 +119,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   const [tab, setTab] = useState(initialTab);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [formModalOpen, setFormModalOpen] = useState(false);
 
-  const canUpdate = useCan('properties.update');
   const canDelete = useCan('properties.delete');
 
   /*
@@ -252,21 +249,6 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
         </Link>
       </div>
 
-      {/* ── Header Actions ───────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2">
-        {canUpdate && (
-          <button
-            onClick={() => setFormModalOpen(true)}
-            className="btn-secondary text-sm flex items-center gap-1.5"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Edit
-          </button>
-        )}
-      </div>
-
       {/* ── Pill-style Tab Bar ─────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2">
         {visibleTabs.map((t) => {
@@ -388,22 +370,6 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
           <ReportsTab propertyUuid={uuid} />
         </div>
       )}
-
-      <PropertyFormModal
-        open={formModalOpen}
-        onClose={() => setFormModalOpen(false)}
-        initial={property}
-        onSaved={(updated) => {
-          if (updated) setProperty(updated);
-          else {
-            PropertyService.show(uuid)
-              .then((data) => {
-                if (data?.success && data?.data) setProperty(data.data);
-              })
-              .catch(() => { });
-          }
-        }}
-      />
 
       <ConfirmModal
         open={deleteOpen}
