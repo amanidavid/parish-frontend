@@ -86,7 +86,7 @@ export default function TopBar() {
 
       {/* Service Switcher */}
       {!isGlobalPage && services?.length > 0 && (
-        <div className="relative hidden sm:block">
+        <div className="relative">
           <button
             onClick={() => setServiceMenuOpen((v) => !v)}
             className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
