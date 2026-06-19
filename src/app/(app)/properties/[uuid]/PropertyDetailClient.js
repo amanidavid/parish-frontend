@@ -249,23 +249,30 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
         </Link>
       </div>
 
-      {/* -- Pill-style Tab Bar ----------------------------------------------- */}
-      <div className="flex flex-wrap gap-2">
-        {visibleTabs.map((t) => {
-          const isActive = tab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => handleTabChange(t.id)}
-              className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${isActive
-                ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
-                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
-                }`}
-            >
-              {t.label}
-            </button>
-          );
-        })}
+      {/* -- Pill-style Tab Bar (horizontal scroll on mobile) ----------------- */}
+      <div className="relative">
+        <div
+          className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {visibleTabs.map((t) => {
+            const isActive = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => handleTabChange(t.id)}
+                className={`shrink-0 px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${isActive
+                  ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                  }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+        {/* Fading edge hint for scrollability */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent hidden sm:hidden" />
       </div>
 
       {/* -- Overview Tab --------------------------------------------------- */}
