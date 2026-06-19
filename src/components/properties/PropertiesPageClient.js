@@ -19,7 +19,7 @@ function capitalize(str) {
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: 7 }).map((_, i) => (
         <td key={i} className="px-5 py-3.5">
           <div className="h-4 bg-gray-100 rounded animate-pulse" style={{ width: `${70 - i * 8}%` }} />
         </td>
@@ -174,7 +174,7 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
                   <span className="sr-only">#</span>
                 </th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Property Name</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                {/* <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th> */}
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
                 <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Floors</th>
                 <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Units</th>
@@ -187,7 +187,7 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
                 Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
               ) : properties.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-16 text-center">
+                  <td colSpan={7} className="px-5 py-16 text-center">
                     <svg className="w-10 h-10 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -218,9 +218,9 @@ export default function PropertiesPageClient({ initialItems = [], initialMeta = 
                         {prop.name}
                       </Link>
                     </td>
-                    <td className="px-5 py-3.5 text-gray-500 text-sm">
+                    {/* <td className="px-5 py-3.5 text-gray-500 text-sm">
                       {prop.type?.name || <span className="text-gray-300">—</span>}
-                    </td>
+                    </td> */}
                     <td className="px-5 py-3.5 text-gray-500 text-sm">
                       {capitalize(prop.location?.ward?.name) || capitalize(prop.location?.district?.name) || prop.address_line || <span className="text-gray-300">—</span>}
                     </td>

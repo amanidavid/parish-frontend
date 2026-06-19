@@ -3,7 +3,7 @@ const WORDS = APP_NAME.split(' ');
 const SHORT_NAME = WORDS[0] || 'ZABA';
 
 export const LANDING_CONFIG = {
-  showLanding: true,
+  showLanding: false,
 
   brand: {
     name: SHORT_NAME,
