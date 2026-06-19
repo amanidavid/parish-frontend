@@ -152,6 +152,16 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
 
   const [mountedTabs, setMountedTabs] = useState(() => new Set([safeTab]));
 
+  /* Ensure the active tab is always mounted even if permission hooks loaded late */
+  useEffect(() => {
+    setMountedTabs((prev) => {
+      if (prev.has(tab)) return prev;
+      const next = new Set(prev);
+      next.add(tab);
+      return next;
+    });
+  }, [tab]);
+
   /* Fallback client-side fetch — only runs if SSR did not provide property data */
   useEffect(() => {
     if (property || error) return;
