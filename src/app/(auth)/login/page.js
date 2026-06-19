@@ -66,11 +66,27 @@ export default function LoginPage() {
         }
         return;
       }
-      const { user, tenant, tenants } = data?.data || {};
+      const { user, tenant, tenants, services } = data?.data || {};
       if (user) {
         const tenantUuid = tenant?.tenant_uuid || tenants?.[0]?.tenant_uuid || null;
-        setAuth(user, tenantUuid);
-        router.push('/dashboard');
+        /* Use backend services if available; otherwise fall back to DEMO_SERVICES for testing */
+        const DEMO_SERVICES = [
+          { id: 'properties', label: 'Property Management', active: true },
+          /* { id: 'lodge', label: 'Lodge Management', active: true }, */
+          /* { id: 'restaurant', label: 'Restaurant POS', active: true }, */
+        ];
+        const userServices = services?.length > 0 ? services : DEMO_SERVICES;
+        /* Demo: toggle between 'full' and 'limited' to test both views */
+        const DEMO_SCOPE = 'full'; // change to 'limited' to test restricted view
+        const DEMO_ASSIGNMENTS = DEMO_SCOPE === 'limited'
+          ? { properties: ['prop-001', 'prop-002'] }
+          : {};
+        const scopedServices = DEMO_SCOPE === 'limited'
+          ? userServices.filter((s) => Object.keys(DEMO_ASSIGNMENTS).includes(s.id))
+          : userServices;
+        setAuth(user, tenantUuid, scopedServices, DEMO_SCOPE, DEMO_ASSIGNMENTS);
+        /* Live version: always land on properties page */
+        router.push('/properties');
       } else {
         setError(data?.message || 'Unexpected response');
       }
@@ -138,7 +154,7 @@ export default function LoginPage() {
               <input
                 id="phone" name="phone" type="tel"
                 className="input rounded-l-none border-l-0 flex-1"
-                placeholder="712 345 678"
+                placeholder="xxxxxxxxx"
                 value={form.phone}
                 onChange={handleChange}
                 required={mode === 'phone'}
@@ -171,10 +187,7 @@ export default function LoginPage() {
         )}
 
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="label mb-0" htmlFor="password">Password</label>
-            <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline">Forgot password?</Link>
-          </div>
+          <label className="label mb-1" htmlFor="password">Password</label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,6 +206,9 @@ export default function LoginPage() {
             </button>
           </div>
           {fieldErrors?.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password[0]}</p>}
+          <div className="mt-1.5 text-right">
+            <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline">Forgot password?</Link>
+          </div>
         </div>
 
         <button type="submit"

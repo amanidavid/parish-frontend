@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import RolesTab from '@/components/access-control/RolesTab';
 import PermissionsTab from '@/components/access-control/PermissionsTab';
 import UsersTab from '@/components/access-control/UsersTab';
@@ -11,12 +12,23 @@ const TABS = [
 ];
 
 export default function AccessControlPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('roles');
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
+        <button
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-2"
+          title="Go back"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
         <h1 className="text-2xl font-bold text-gray-900">Access Control</h1>
         <p className="text-sm text-gray-500 mt-1">Manage roles, permissions, and user access</p>
       </div>

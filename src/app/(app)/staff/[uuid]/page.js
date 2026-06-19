@@ -3,24 +3,19 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import StaffService from '@/services/StaffService';
-import ConfirmModal from '@/components/ui/ConfirmModal';
 import useCan from '@/hooks/useCan';
 import useUiStore from '@/store/uiStore';
-
-const STAFF_STATUS = {
-  active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  suspended: { label: 'Suspended', bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-400' },
-};
-
-function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+import StaffPropertyAssignmentModal from '@/components/staff/StaffPropertyAssignmentModal';
+import StaffPropertyAssignmentService from '@/services/StaffPropertyAssignmentService';
 
 export default function StaffDetailPage() {
   const { uuid } = useParams();
   const router = useRouter();
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignments, setAssignments] = useState([]);
+  const [assignmentsLoading, setAssignmentsLoading] = useState(false);
   const canManage = useCan('staff.manage');
 
   useEffect(() => {
@@ -37,26 +32,19 @@ export default function StaffDetailPage() {
       .finally(() => setLoading(false));
   }, [uuid]);
 
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      const data = await StaffService.destroy(uuid);
-      if (data?.success !== false) {
-        useUiStore.getState().showModal({
-          type: 'success',
-          message: data?.message || 'Staff deleted successfully.',
-          onRefresh: () => router.push('/staff'),
-        });
-      } else {
-        useUiStore.getState().showModal({ type: 'error', message: data?.message || 'Failed to delete staff.' });
-      }
-    } catch {
-      useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' });
-    } finally {
-      setDeleting(false);
-      setDeleteOpen(false);
-    }
-  };
+  /* Load staff property assignments */
+  useEffect(() => {
+    if (!uuid) return;
+    setAssignmentsLoading(true);
+    StaffPropertyAssignmentService.index({ user_uuid: uuid, per_page: 100 })
+      .then((res) => {
+        if (res?.success) {
+          setAssignments(Array.isArray(res.data) ? res.data : (res.data?.data || []));
+        }
+      })
+      .catch(() => { })
+      .finally(() => setAssignmentsLoading(false));
+  }, [uuid]);
 
   if (loading) {
     return (
@@ -70,13 +58,10 @@ export default function StaffDetailPage() {
   if (!member) {
     return (
       <div className="space-y-5">
-        <Link href="/staff" className="btn-secondary">Back to Staff</Link>
+        <button onClick={() => router.back()} className="btn-secondary">Back</button>
       </div>
     );
   }
-
-  const status = STAFF_STATUS[member?.status] || STAFF_STATUS.suspended;
-  const roles = member?.roles || [];
 
   return (
     <div className="space-y-5">
@@ -89,85 +74,87 @@ export default function StaffDetailPage() {
           </svg>
           <span className="text-gray-900 font-medium truncate max-w-xs">{member?.name}</span>
         </nav>
-        <Link href="/staff" className="btn-secondary text-sm flex items-center gap-1.5">
+        <button onClick={() => router.back()} className="btn-secondary text-sm flex items-center gap-1.5">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Staff
-        </Link>
+          Back
+        </button>
       </div>
 
-      {/* Summary card */}
+      {/* Assigned Properties */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center shrink-0 text-base font-semibold text-primary-600 uppercase">
-              {member?.name?.charAt(0) || '?'}
-            </span>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-lg font-bold text-gray-900">{cap(member?.name)}</h1>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${status.bg} ${status.text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                  {status.label}
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 font-mono">@{member?.base_user?.username || '—'}</p>
-            </div>
-          </div>
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Assigned Properties</p>
           {canManage && (
-            <div className="flex items-center gap-2">
-              <Link href={`/staff/${uuid}/edit`} className="btn-secondary text-sm">Edit</Link>
-              <button onClick={() => setDeleteOpen(true)} className="btn-danger text-sm">Delete</button>
-            </div>
+            <button
+              onClick={() => setAssignModalOpen(true)}
+              className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+            >
+              + Manage Properties
+            </button>
           )}
         </div>
-        <div className="border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100">
-          {[
-            { label: 'Email', value: member?.email },
-            { label: 'Phone', value: member?.phone },
-            { label: 'Roles', value: roles.length },
-            { label: 'Created', value: member?.created_at ? new Date(member.created_at).toLocaleDateString('en-GB') : '—' },
-          ].map(({ label, value, large }) => (
-            <div key={label} className="px-6 py-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-              <p className={`font-medium text-gray-800 ${large ? 'text-lg' : 'text-sm'} truncate`}>
-                {value !== undefined && value !== null ? value : <span className="text-gray-300">—</span>}
-              </p>
-            </div>
-          ))}
-        </div>
+        {assignmentsLoading ? (
+          <div className="px-6 py-8 text-center text-sm text-gray-400">Loading...</div>
+        ) : assignments.length === 0 ? (
+          <div className="px-6 py-8 text-center">
+            <p className="text-sm text-gray-400">No properties assigned.</p>
+            {canManage && (
+              <button
+                onClick={() => setAssignModalOpen(true)}
+                className="mt-2 text-xs font-medium text-blue-600 hover:underline"
+              >
+                Assign properties now
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {assignments.map((a) => (
+              <div key={a.uuid} className="px-6 py-3.5 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <Link href={`/properties/${a.property?.uuid}`} className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                      {a.property?.name || '—'}
+                    </Link>
+                    <p className="text-xs text-gray-400">Assigned {a.created_at ? new Date(a.created_at).toLocaleDateString() : '—'}</p>
+                  </div>
+                </div>
+                {canManage && (
+                  <button
+                    onClick={() => setAssignModalOpen(true)}
+                    className="text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                  >
+                    Manage
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Overview */}
-      {/* <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Staff Details</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
-          {[
-            { label: 'Full Name', value: member?.name },
-            { label: 'Username', value: member?.base_user?.username },
-            { label: 'Status', value: cap(member?.status) },
-            { label: 'Email', value: member?.email },
-            { label: 'Phone', value: member?.phone },
-            { label: 'Base User ID', value: member?.base_user?.uuid },
-          ].map(({ label, value }) => (
-            <div key={label} className="px-6 py-4">
-              <p className="text-xs font-medium text-gray-400 mb-1">{label}</p>
-              <p className="text-sm font-medium text-gray-800">{value || <span className="text-gray-300">—</span>}</p>
-            </div>
-          ))}
-        </div>
-      </div> */}
-      <ConfirmModal
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDelete}
-        loading={deleting}
-        title="Delete Staff"
-        message={`Delete "${member?.name}"? This will remove them from the workspace. Owner accounts cannot be deleted.`}
-        confirmLabel="Delete Staff"
+      <StaffPropertyAssignmentModal
+        open={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        staffUuid={uuid}
+        existingAssignments={assignments}
+        onSaved={() => {
+          setAssignmentsLoading(true);
+          StaffPropertyAssignmentService.index({ user_uuid: uuid, per_page: 100 })
+            .then((res) => {
+              if (res?.success) {
+                setAssignments(Array.isArray(res.data) ? res.data : (res.data?.data || []));
+              }
+            })
+            .finally(() => setAssignmentsLoading(false));
+        }}
       />
     </div>
   );

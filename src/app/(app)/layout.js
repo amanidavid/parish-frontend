@@ -6,6 +6,7 @@ import PageProgress from '@/components/ui/PageProgress';
 import NotificationModal from '@/components/ui/NotificationModal';
 import useUiStore from '@/store/uiStore';
 import useAuthStore from '@/store/authStore';
+import useServiceStore from '@/store/serviceStore';
 
 function ProvisioningScreen({ status }) {
   const isFailed = status === 'failed';
@@ -39,12 +40,16 @@ function ProvisioningScreen({ status }) {
   );
 }
 
+/* Static demo services for testing multi-service UI before backend is ready */
+const DEMO_SERVICES = [
+  { id: 'properties', label: 'Property Management', active: true },
+  /* { id: 'lodge', label: 'Lodge Management', active: true }, */
+  /* { id: 'restaurant', label: 'Restaurant POS', active: true }, */
+];
+
 export default function AppLayout({ children }) {
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
-  const setPermissions = useAuthStore((s) => s.setPermissions);
-  const setRoles = useAuthStore((s) => s.setRoles);
-  const setAuth = useAuthStore((s) => s.setAuth);
   const [provisioningStatus, setProvisioningStatus] = useState(null);
   const pollRef = useRef(null);
 
@@ -88,10 +93,25 @@ export default function AppLayout({ children }) {
       const data = await res.json().catch(() => ({}));
       if (data?.success && data.data?.tenant_user) {
         const tu = data.data.tenant_user;
+        /* Use backend services if available; otherwise fall back to DEMO_SERVICES for testing */
+        const userServices = data.data.services?.length > 0 ? data.data.services : DEMO_SERVICES;
+        /* Demo: toggle between 'full' and 'limited' to test both views */
+        const DEMO_SCOPE = 'full'; // change to 'limited' to test restricted view
+        const DEMO_ASSIGNMENTS = DEMO_SCOPE === 'limited'
+          ? { properties: ['prop-001', 'prop-002'] } // assigned to 2 properties only
+          : {};
+        /* For limited users, filter services to only those in assignments */
+        const scopedServices = DEMO_SCOPE === 'limited'
+          ? userServices.filter((s) => Object.keys(DEMO_ASSIGNMENTS).includes(s.id))
+          : userServices;
         setProvisioningStatus(null);
-        setPermissions(tu.permissions || []);
-        setRoles((tu.roles || []).map((r) => (typeof r === 'string' ? r : r.name)));
-        setAuth(tu, useAuthStore.getState().tenantUuid);
+        useAuthStore.getState().setPermissions(tu.permissions || []);
+        useAuthStore.getState().setRoles((tu.roles || []).map((r) => (typeof r === 'string' ? r : r.name)));
+        useAuthStore.getState().setAuth(tu, useAuthStore.getState().tenantUuid, scopedServices, DEMO_SCOPE, DEMO_ASSIGNMENTS);
+        useAuthStore.getState().setServices(scopedServices);
+        if (scopedServices?.length > 0) {
+          useServiceStore.getState().setActiveService(scopedServices[0].id);
+        }
       }
     };
 
@@ -100,7 +120,7 @@ export default function AppLayout({ children }) {
       cancelled = true;
       if (pollRef.current) clearTimeout(pollRef.current);
     };
-  }, [setPermissions, setRoles, setAuth]);
+  }, []);
 
   if (provisioningStatus) {
     return <ProvisioningScreen status={provisioningStatus} />;

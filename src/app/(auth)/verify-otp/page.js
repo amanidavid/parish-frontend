@@ -161,34 +161,17 @@ function VerifyOtpForm() {
                 setError(null);
                 try {
                   const stored = JSON.parse(sessionStorage.getItem('last_auth_attempt') || '{}');
-                  if (!stored.payload) {
+                  if (!stored.phone) {
                     setError('Unable to resend. Please go back and log in again.');
                     setResendLoading(false);
                     return;
                   }
-                  const res = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(stored.payload),
-                  });
-                  const data = await res.json();
-                  if (!res.ok || !data?.success) {
-                    setError(data?.message || 'Failed to resend OTP');
-                    setResendLoading(false);
-                    return;
-                  }
-                  const newCid = data?.data?.challenge_id;
-                  if (newCid) {
-                    setDigits(['', '', '', '', '', '']);
-                    setCooldown(OTP_RESEND_SECONDS);
-                    setCanResend(false);
-                    router.replace(`/verify-otp?cid=${newCid}${fromRegister ? '&from=register' : ''}`);
-                  } else {
-                    setError('Failed to resend OTP');
-                  }
+                  /* Resend requires password which is not stored for security.
+                     User must return to login to trigger a new OTP. */
+                  setError('For security, your password is not stored. Please go back to login to request a new code.');
+                  setResendLoading(false);
                 } catch {
                   setError('Network error');
-                } finally {
                   setResendLoading(false);
                 }
               }}

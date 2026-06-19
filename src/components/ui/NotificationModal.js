@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import useUiStore from '@/store/uiStore';
 
 const ICONS = {
@@ -33,27 +33,29 @@ export default function NotificationModal() {
   const title = modal?.title || TITLES[type];
   const message = modal?.message || '';
 
-  const handleClose = useCallback(() => {
-    if (modal?.onRefresh && type === 'success') {
-      modal.onRefresh();
-    }
-    closeModal();
-  }, [modal, type, closeModal]);
+  const modalRef = useRef(modal);
+  modalRef.current = modal;
+  const closeModalRef = useRef(closeModal);
+  closeModalRef.current = closeModal;
 
-  const handleKey = useCallback(
-    (e) => { if (e.key === 'Escape') handleClose(); },
-    [handleClose]
-  );
+  const handleClose = () => {
+    const m = modalRef.current;
+    if (m?.onRefresh && m?.type === 'success') m.onRefresh();
+    closeModalRef.current();
+  };
 
   useEffect(() => {
     if (!open) return;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') handleClose();
+    };
     document.addEventListener('keydown', handleKey);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', handleKey);
       document.body.style.overflow = '';
     };
-  }, [open, handleKey]);
+  }, [open]);
 
   if (!open) return null;
 

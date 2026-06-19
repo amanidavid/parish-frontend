@@ -1,5 +1,5 @@
 'use client';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 const currencyFmt = new Intl.NumberFormat('en-TZ', {
@@ -86,6 +86,39 @@ const PropertyRow = React.memo(function PropertyRow({ item }) {
   );
 });
 
+function Pagination({ meta, data, onPageChange }) {
+  if (!meta || meta.last_page <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+      <p className="text-xs text-gray-500">
+        Showing <span className="font-medium">{meta.from}</span> to <span className="font-medium">{meta.to}</span> of{' '}
+        <span className="font-medium">{meta.total}</span>
+      </p>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={!data?.links?.prev}
+          onClick={() => onPageChange(meta.current_page - 1)}
+          className="px-2.5 py-1.5 text-xs font-medium rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          Previous
+        </button>
+        <span className="px-2 text-xs text-gray-500">
+          Page {meta.current_page} of {meta.last_page}
+        </span>
+        <button
+          type="button"
+          disabled={!data?.links?.next}
+          onClick={() => onPageChange(meta.current_page + 1)}
+          className="px-2.5 py-1.5 text-xs font-medium rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ByPropertyTab({ data, sort, onSort, page, onPageChange, search, onSearch }) {
   const [localSearch, setLocalSearch] = useState(search);
 
@@ -98,39 +131,6 @@ function ByPropertyTab({ data, sort, onSort, page, onPageChange, search, onSearc
     e.preventDefault();
     onSearch(localSearch);
   }, [localSearch, onSearch]);
-
-  const pagination = useMemo(() => {
-    if (!meta || meta.last_page <= 1) return null;
-    return (
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <p className="text-xs text-gray-500">
-          Showing <span className="font-medium">{meta.from}</span> to <span className="font-medium">{meta.to}</span> of{' '}
-          <span className="font-medium">{meta.total}</span>
-        </p>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            disabled={!data?.links?.prev}
-            onClick={() => onPageChange(meta.current_page - 1)}
-            className="px-2.5 py-1.5 text-xs font-medium rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Previous
-          </button>
-          <span className="px-2 text-xs text-gray-500">
-            Page {meta.current_page} of {meta.last_page}
-          </span>
-          <button
-            type="button"
-            disabled={!data?.links?.next}
-            onClick={() => onPageChange(meta.current_page + 1)}
-            className="px-2.5 py-1.5 text-xs font-medium rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    );
-  }, [data, meta, onPageChange]);
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -177,7 +177,7 @@ function ByPropertyTab({ data, sort, onSort, page, onPageChange, search, onSearc
         </table>
       </div>
 
-      {pagination}
+      <Pagination meta={meta} data={data} onPageChange={onPageChange} />
     </div>
   );
 }

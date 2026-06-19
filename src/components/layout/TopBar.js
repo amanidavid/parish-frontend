@@ -1,12 +1,14 @@
 'use client';
-import { useState, useCallback, memo } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useCallback } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import useAuthStore from '@/store/authStore';
+import useServiceStore from '@/store/serviceStore';
 import useUiStore from '@/store/uiStore';
+import { SERVICE_REGISTRY } from '@/modules/services/serviceRegistry';
+import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 
 /** Icon button used in the topbar action row */
-const IconButton = memo(function IconButton({ onClick, badge, title, children }) {
+function IconButton({ onClick, badge, title, children }) {
   return (
     <button
       onClick={onClick}
@@ -21,7 +23,7 @@ const IconButton = memo(function IconButton({ onClick, badge, title, children })
       )}
     </button>
   );
-});
+}
 
 /** User initials avatar */
 function Avatar({ name }) {
@@ -35,24 +37,25 @@ function Avatar({ name }) {
   );
 }
 
+const GLOBAL_ROUTES = ['/staff', '/subscription', '/access-control'];
+
 export default function TopBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
+  const services = useAuthStore((s) => s.services);
+  const activeService = useServiceStore((s) => s.activeService);
+  const setActiveService = useServiceStore((s) => s.setActiveService);
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [addNewOpen, setAddNewOpen] = useState(false);
+  const [serviceMenuOpen, setServiceMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const permissions = useAuthStore((s) => s.permissions);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
-  const quickActions = [
-    { href: '/properties/create', label: 'Property', permission: 'properties.create', color: '#2563eb', bg: '#eff6ff', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-    { href: '/customers/create', label: 'Customer', permission: 'customers.create', color: '#7c3aed', bg: '#f5f3ff', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
-    { href: '/staff/create', label: 'Staff', permission: 'staff.manage', color: '#059669', bg: '#ecfdf5', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-    { href: '/staff-property-assignments', label: 'Assignment', permission: 'staff_property_assignments.create', color: '#ea580c', bg: '#fff7ed', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
-  ].filter((item) => permissions.some((p) => p.name === item.permission));
+  const isGlobalPage = GLOBAL_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`));
 
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
@@ -61,9 +64,9 @@ export default function TopBar() {
     router.push('/login');
   }, [clearAuth, router]);
 
-  const handleSettingsClick = useCallback(() => {
+  const handleViewProfileClick = useCallback(() => {
     setUserMenuOpen(false);
-    router.push('/settings');
+    router.push('/profile');
   }, [router]);
 
   return (
@@ -81,74 +84,89 @@ export default function TopBar() {
         </svg>
       </button>
 
+      {/* Service Switcher */}
+      {!isGlobalPage && services?.length > 0 && (
+        <div className="relative hidden sm:block">
+          <button
+            onClick={() => setServiceMenuOpen((v) => !v)}
+            className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            {activeService && SERVICE_REGISTRY[activeService] ? (
+              <>
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: SERVICE_REGISTRY[activeService].color }}
+                />
+                <span>{SERVICE_REGISTRY[activeService].shortLabel}</span>
+              </>
+            ) : (
+              <span className="text-gray-400">Select service</span>
+            )}
+            <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {serviceMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setServiceMenuOpen(false)} />
+              <div className="absolute left-0 top-10 w-60 bg-white rounded-lg border border-gray-200 shadow-xl z-30 py-1">
+                {services.map((svc) => {
+                  const config = SERVICE_REGISTRY[svc.id];
+                  if (!config) return null;
+                  return (
+                    <button
+                      key={svc.id}
+                      onClick={() => {
+                        setActiveService(svc.id);
+                        setServiceMenuOpen(false);
+                        router.push(config.baseRoute);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors ${activeService === svc.id ? 'bg-gray-50 text-gray-900' : 'text-gray-600 hover:bg-gray-50'
+                        }`}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: config.color }} />
+                      <span className="whitespace-nowrap">{config.label}</span>
+                      {activeService === svc.id && (
+                        <svg className="w-3.5 h-3.5 ml-auto text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+                {/* Onboarding hidden for live release — re-enable when multi-service API is ready */
+                /*
+                <div className="border-t border-gray-100 my-1" />
+                <button
+                  onClick={() => {
+                    setServiceMenuOpen(false);
+                    router.push('/onboarding');
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Service
+                </button>
+                */}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* Right actions */}
       <div className="flex items-center gap-1">
-        <IconButton title="Settings" onClick={handleSettingsClick}>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </IconButton>
-
-        {/* Divider */}
-        <div className="w-px h-6 bg-gray-200 mx-1" />
-
-        {/* Add New dropdown */}
-        {quickActions.length > 0 && (
-          <div className="relative">
-            <button
-              onClick={() => setAddNewOpen((v) => !v)}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white shadow-sm hover:shadow transition-all shrink-0"
-              style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Add New</span>
-              <svg className="w-3 h-3 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {addNewOpen && (
-              <>
-                <div className="fixed inset-0 z-20" onClick={() => setAddNewOpen(false)} />
-                <div className="absolute right-0 top-12 w-72 bg-white rounded-2xl border border-gray-200 shadow-2xl z-30 p-4">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Quick Create</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {quickActions.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setAddNewOpen(false)}
-                        className="flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all group"
-                      >
-                        <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: item.bg }}>
-                          <svg className="w-5 h-5" style={{ color: item.color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                          </svg>
-                        </span>
-                        <span className="text-[11px] font-medium text-gray-600 group-hover:text-gray-900 text-center leading-tight">{item.label}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Divider */}
-        <div className="w-px h-6 bg-gray-200 mx-1 hidden sm:block" />
-
         {/* User menu */}
         <div className="relative">
           <button
             onClick={() => setUserMenuOpen((v) => !v)}
-            className="flex items-center gap-2.5 rounded-xl pl-1 pr-3 py-1.5 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2.5 rounded-lg pl-1 pr-3 py-1.5 hover:bg-gray-50 transition-colors"
           >
             <Avatar name={user?.name} />
             <div className="hidden md:block text-left">
@@ -163,7 +181,7 @@ export default function TopBar() {
           {userMenuOpen && (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setUserMenuOpen(false)} />
-              <div className="absolute right-0 top-12 w-56 bg-white rounded-xl border border-gray-200 shadow-xl z-30 overflow-hidden">
+              <div className="absolute right-0 top-12 w-56 bg-white rounded-lg border border-gray-200 shadow-xl z-30 overflow-hidden">
                 {/* User info */}
                 <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 bg-gray-50">
                   <Avatar name={user?.name} />
@@ -175,22 +193,13 @@ export default function TopBar() {
                 {/* Menu items */}
                 <div className="py-1">
                   <button
-                    onClick={handleSettingsClick}
+                    onClick={handleViewProfileClick}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
-                    My Profile
-                  </button>
-                  <button
-                    onClick={handleSettingsClick}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Settings
+                    View Profile
                   </button>
                 </div>
                 <div className="border-t border-gray-100">
@@ -210,6 +219,7 @@ export default function TopBar() {
           )}
         </div>
       </div>
+      <ChangePasswordModal open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
     </header>
   );
 }
