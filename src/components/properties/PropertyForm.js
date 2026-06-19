@@ -242,6 +242,7 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
             </Field>
           </div>
 
+          {/* Property Type hidden temporarily
           <Field label="Property Type" error={fieldErrors?.type_uuid?.[0]}>
             <select
               name="type_uuid"
@@ -256,6 +257,7 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
               ))}
             </select>
           </Field>
+          */}
         </div>
       </div>
 
