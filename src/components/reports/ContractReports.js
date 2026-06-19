@@ -100,7 +100,7 @@ function ContractReports() {
   const [expiringLoading, setExpiringLoading] = useState(false);
   const [expiringError, setExpiringError] = useState(null);
 
-  /* ── Summary: only fires when on summary tab AND summary-relevant filters change ── */
+  /* -- Summary: only fires when on summary tab AND summary-relevant filters change -- */
   useEffect(() => {
     if (activeTab !== 'summary') return;
     const ctrl = new AbortController();
@@ -121,7 +121,7 @@ function ContractReports() {
     return () => ctrl.abort();
   }, [activeTab, filters.propertyUuid, filters.customerUuid, filters.status, filters.billingCycle, filters.startDate, filters.endDate]);
 
-  /* ── By Property: only fires when on by-property tab AND its filters change ── */
+  /* -- By Property: only fires when on by-property tab AND its filters change -- */
   useEffect(() => {
     if (activeTab !== 'by-property') return;
     const ctrl = new AbortController();
@@ -146,7 +146,7 @@ function ContractReports() {
     return () => ctrl.abort();
   }, [activeTab, filters.propertyUuid, filters.customerUuid, filters.status, filters.billingCycle, filters.startDate, filters.endDate, filters.search, filters.perPage, filters.sort, filters.page]);
 
-  /* ── Expiring: only fires when on expiring tab AND its filters change ── */
+  /* -- Expiring: only fires when on expiring tab AND its filters change -- */
   useEffect(() => {
     if (activeTab !== 'expiring') return;
     const ctrl = new AbortController();

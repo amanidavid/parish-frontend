@@ -11,13 +11,13 @@ import useCan from '@/hooks/useCan';
 
 const PER_PAGE = 50;
 
-/* ── Portal wrapper — renders modal at body root to escape transformed ancestors ── */
+/* -- Portal wrapper — renders modal at body root to escape transformed ancestors -- */
 function ModalPortal({ children }) {
   if (typeof document === 'undefined') return null;
   return createPortal(children, document.body);
 }
 
-/* ── Helpers ─────────────────────────────────────────────────────── */
+/* -- Helpers ------------------------------------------------------- */
 function capitalize(value) {
   if (!value || typeof value !== 'string') return value || '';
   return value
@@ -45,7 +45,7 @@ function FloorAvatar({ number, size = 'md' }) {
   );
 }
 
-/* ── Floor modal (create + edit) ─────────────────────────────────── */
+/* -- Floor modal (create + edit) ----------------------------------- */
 function FloorModal({ open, onClose, onSaved, propertyUuid, initial }) {
   const isEdit = !!initial;
   const [form, setForm] = useState({ name: '', floor_number: '' });
@@ -131,7 +131,7 @@ function FloorModal({ open, onClose, onSaved, propertyUuid, initial }) {
   );
 }
 
-/* ── Field row ───────────────────────────────────────────────────── */
+/* -- Field row ----------------------------------------------------- */
 function Field({ label, value }) {
   return (
     <div>
@@ -141,7 +141,7 @@ function Field({ label, value }) {
   );
 }
 
-/* ── Unit modal (create + edit) ──────────────────────────────────── */
+/* -- Unit modal (create + edit) ------------------------------------ */
 function UnitModal({ open, onClose, onSaved, floorUuid, initial }) {
   const isEdit = !!initial;
   const [form, setForm] = useState({ unit_number: '', description: '', status: 'vacant' });
@@ -238,7 +238,7 @@ function UnitModal({ open, onClose, onSaved, floorUuid, initial }) {
   );
 }
 
-/* ── Contract modal (create for a unit) ──────────────────────────── */
+/* -- Contract modal (create for a unit) ---------------------------- */
 function ContractModal({ open, onClose, onSaved, propertyUuid, unit }) {
   const [form, setForm] = useState({
     customer_uuid: '', contract_number: '', start_date: '', end_date: '', amount: '', currency: 'TZS', billing_cycle: 'monthly', status: 'draft', notes: '',
@@ -431,7 +431,7 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, unit }) {
   );
 }
 
-/* ── Main workspace ──────────────────────────────────────────────── */
+/* -- Main workspace ------------------------------------------------ */
 export default function FloorsWorkspace({ propertyUuid }) {
   const [floors, setFloors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -455,7 +455,7 @@ export default function FloorsWorkspace({ propertyUuid }) {
   const [unitSearchInput, setUnitSearchInput] = useState('');
   const [appliedUnitSearch, setAppliedUnitSearch] = useState('');
 
-  /* ── Permission guards ── */
+  /* -- Permission guards -- */
   const canCreateFloor = useCan('property_floors.create');
   const canEditFloor = useCan('property_floors.update');
   const canDeleteFloor = useCan('property_floors.delete');
@@ -466,7 +466,7 @@ export default function FloorsWorkspace({ propertyUuid }) {
 
   const abortRef = useRef(null);
 
-  /* ── Load floors ── */
+  /* -- Load floors -- */
   const loadFloors = useCallback(async () => {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
@@ -509,7 +509,7 @@ export default function FloorsWorkspace({ propertyUuid }) {
     return () => clearTimeout(t);
   }, [unitSearchInput]);
 
-  /* ── Load units for selected floor ── */
+  /* -- Load units for selected floor -- */
   const loadUnits = useCallback(async (floorUuid, search = '') => {
     if (!floorUuid) return;
     setUnitsLoading(true);
@@ -594,7 +594,7 @@ export default function FloorsWorkspace({ propertyUuid }) {
     <div className="space-y-4">
       {/* Master–detail container */}
       <div className="flex h-[calc(100vh-14rem)] min-h-[400px] bg-white border border-gray-200 rounded-xl overflow-hidden">
-        {/* ── List pane ── */}
+        {/* -- List pane -- */}
         <aside className={`w-full md:w-80 lg:w-96 md:border-r border-gray-200 flex-col min-h-0 ${selected ? 'hidden md:flex' : 'flex'}`}>
           {/* Search + New Floor */}
           <div className="p-3 border-b border-gray-100 space-y-2">
@@ -668,7 +668,7 @@ export default function FloorsWorkspace({ propertyUuid }) {
           </div>
         </aside>
 
-        {/* ── Detail pane ── */}
+        {/* -- Detail pane -- */}
         <section className={`flex-1 min-w-0 min-h-0 flex-col ${selected ? 'flex' : 'hidden md:flex'}`}>
           {!selected ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-6">

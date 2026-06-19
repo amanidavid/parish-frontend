@@ -14,7 +14,7 @@ function buildQuery(params = {}) {
 }
 
 const MaintenanceService = {
-  // ─── Jobs ──────────────────────────────────────────────────────────────────
+  // --- Jobs ------------------------------------------------------------------
   jobsIndex(params = {}) {
     return apiFetch(`${JOBS_BASE}${buildQuery(params)}`);
   },
@@ -43,7 +43,7 @@ const MaintenanceService = {
     return apiFetch(`${JOBS_BASE}/${uuid}`, { method: 'DELETE' });
   },
 
-  // ─── Expenses ─────────────────────────────────────────────────────────────
+  // --- Expenses -------------------------------------------------------------
   expensesIndex(params = {}) {
     return apiFetch(`${EXPENSES_BASE}${buildQuery(params)}`);
   },
@@ -72,7 +72,7 @@ const MaintenanceService = {
     return apiFetch(`${EXPENSES_BASE}/${uuid}`, { method: 'DELETE' });
   },
 
-  // ─── Reports ───────────────────────────────────────────────────────────────
+  // --- Reports ---------------------------------------------------------------
   summaryReport(params = {}) {
     return apiFetch(`${REPORTS_BASE}/summary${buildQuery(params)}`);
   },

@@ -22,7 +22,7 @@ export default function PageProgress() {
   const pathnameRef = useRef(pathname);
   const timerRef = useRef(null);
 
-  /* ── Detect navigation START by intercepting anchor clicks ──────────── */
+  /* -- Detect navigation START by intercepting anchor clicks ------------ */
   useEffect(() => {
     const handleClick = (e) => {
       const anchor = e.target.closest('a[href]');
@@ -49,7 +49,7 @@ export default function PageProgress() {
     return () => document.removeEventListener('click', handleClick, true);
   }, [setNavigating]);
 
-  /* ── Detect navigation END when pathname changes ────────────────────── */
+  /* -- Detect navigation END when pathname changes ---------------------- */
   useEffect(() => {
     if (pathname !== pathnameRef.current) {
       pathnameRef.current = pathname;
@@ -65,7 +65,7 @@ export default function PageProgress() {
 
   return (
     <>
-      {/* ── Top progress bar ── */}
+      {/* -- Top progress bar -- */}
       <div
         className="fixed top-0 left-0 right-0 z-[9999] h-[3px] overflow-hidden"
         aria-hidden="true"
@@ -73,7 +73,7 @@ export default function PageProgress() {
         <div className="page-progress-bar" />
       </div>
 
-      {/* ── Floating loading pill (bottom-right) ── */}
+      {/* -- Floating loading pill (bottom-right) -- */}
       <div
         className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 bg-white border border-gray-200 rounded-full shadow-lg px-4 py-2.5 page-progress-pill"
         role="status"

@@ -17,7 +17,7 @@ import {
 import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
 
-/* ── Memoized presentational components ─────────────────────────────── */
+/* -- Memoized presentational components ------------------------------- */
 
 /* CSS-only donut chart */
 const OccupancyPie = memo(function OccupancyPie({ occupied, total }) {
@@ -249,7 +249,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
         </Link>
       </div>
 
-      {/* ── Pill-style Tab Bar ─────────────────────────────────────────────── */}
+      {/* -- Pill-style Tab Bar ----------------------------------------------- */}
       <div className="flex flex-wrap gap-2">
         {visibleTabs.map((t) => {
           const isActive = tab === t.id;
@@ -268,7 +268,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
         })}
       </div>
 
-      {/* ── Overview Tab ─────────────────────────────────────────────────── */}
+      {/* -- Overview Tab --------------------------------------------------- */}
       {tab === 'overview' && (
         <div className="space-y-5">
           {/* Stat cards */}
@@ -329,7 +329,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
       )}
 
       {/*
-       * ── Mount-once tab panels ──────────────────────────────────────────────
+       * -- Mount-once tab panels ----------------------------------------------
        * Each tab component mounts the first time its tab is opened, then stays
        * mounted forever (CSS hidden). This preserves scroll position, search
        * input, pagination state, and — critically — avoids re-fetching data on

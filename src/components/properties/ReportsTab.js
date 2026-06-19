@@ -182,7 +182,7 @@ export default function ReportsTab({ propertyUuid }) {
   const [contractLoading, setContractLoading] = useState(true);
   const [contractError, setContractError] = useState(null);
 
-  // ── Load maintenance summary ──
+  // -- Load maintenance summary --
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
     try {
@@ -201,7 +201,7 @@ export default function ReportsTab({ propertyUuid }) {
     }
   }, [propertyUuid, mainStartDate, mainEndDate]);
 
-  // ── Load contract chart ──
+  // -- Load contract chart --
   const loadContractChart = useCallback(async () => {
     setContractLoading(true);
     setContractError(null);
