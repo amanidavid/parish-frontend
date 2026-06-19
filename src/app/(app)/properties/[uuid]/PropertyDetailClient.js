@@ -225,7 +225,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-12 text-center max-w-md mx-auto">
         <p className="text-red-600 mb-4">{error}</p>
-        <Link href="/properties" className="btn-secondary">Back to Properties</Link>
+        <Link href="/properties" className="btn-secondary">Back</Link>
       </div>
     );
   }
@@ -245,7 +245,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Properties
+          Back
         </Link>
       </div>
 

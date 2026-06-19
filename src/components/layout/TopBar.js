@@ -66,8 +66,8 @@ export default function TopBar() {
 
   const handleViewProfileClick = useCallback(() => {
     setUserMenuOpen(false);
-    setChangePasswordOpen(true);
-  }, []);
+    router.push('/profile');
+  }, [router]);
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center gap-4 px-4 shrink-0 z-10">

@@ -154,7 +154,7 @@ export default function LoginPage() {
               <input
                 id="phone" name="phone" type="tel"
                 className="input rounded-l-none border-l-0 flex-1"
-                placeholder="712 345 678"
+                placeholder="xxxxxxxxx"
                 value={form.phone}
                 onChange={handleChange}
                 required={mode === 'phone'}

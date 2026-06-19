@@ -208,7 +208,7 @@ export default function ReportsTab({ propertyUuid }) {
     try {
       const payload = {
         propertyUuid,
-        period: contractPeriod,
+        period: contractPeriod === 'custom' ? 'month' : contractPeriod,
         metric: contractMetric,
         groupBy: 'property',
         recognizedStatuses: ['active', 'renewed'],
@@ -216,6 +216,7 @@ export default function ReportsTab({ propertyUuid }) {
       if (contractPeriod === 'custom') {
         payload.startDate = contractCustomStart;
         payload.endDate = contractCustomEnd;
+        payload.range = 'custom';
       } else {
         payload.range = contractRange;
       }

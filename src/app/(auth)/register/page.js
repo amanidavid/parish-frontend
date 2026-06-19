@@ -124,7 +124,7 @@ export default function RegisterPage() {
             placeholder="John Doe" value={form.name} onChange={handleChange} required />
         </Field>
 
-        <Field label="Phone Number" id="phone" error={fieldErrors?.phone?.[0]} hint="Enter digits after country code, e.g. 712 345 678">
+        <Field label="Phone Number" id="phone" error={fieldErrors?.phone?.[0]} hint="Enter digits after country code">
           <div className="flex">
             <CountryCodePicker
               value={country.iso2}
@@ -136,7 +136,7 @@ export default function RegisterPage() {
               name="phone"
               type="tel"
               className="input rounded-l-none border-l-0 flex-1"
-              placeholder="712 345 678"
+              placeholder="xxxxxxxxx"
               value={form.phone}
               onChange={handleChange}
               required
