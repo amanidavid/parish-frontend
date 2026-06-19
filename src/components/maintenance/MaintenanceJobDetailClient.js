@@ -44,7 +44,7 @@ export default function MaintenanceJobDetailClient({ uuid }) {
   const [submitting, setSubmitting] = useState(false);
   const confirmModal = useConfirmModal();
 
-  // ── Load job ──
+  // -- Load job --
   useEffect(() => {
     setJobLoading(true);
     MaintenanceService.jobsShow(uuid).then((res) => {
@@ -53,7 +53,7 @@ export default function MaintenanceJobDetailClient({ uuid }) {
     });
   }, [uuid]);
 
-  // ── Load expenses ──
+  // -- Load expenses --
   const loadExpenses = useCallback(async (pg) => {
     setExpensesLoading(true);
     const res = await MaintenanceService.expensesIndex({
@@ -69,7 +69,7 @@ export default function MaintenanceJobDetailClient({ uuid }) {
 
   useEffect(() => { loadExpenses(1); }, [loadExpenses]);
 
-  // ── Modal helpers ──
+  // -- Modal helpers --
   const openCreate = useCallback(() => {
     setForm({ ...EMPTY_EXPENSE, expense_date: new Date().toISOString().slice(0, 10) });
     setErrors({});

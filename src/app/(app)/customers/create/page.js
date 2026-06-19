@@ -1,12 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import CustomerService from '@/services/CustomerService';
 import CustomerForm from '@/components/customers/CustomerForm';
 import useUiStore from '@/store/uiStore';
 
-export default function CreateCustomerPage() {
+function CreateCustomerPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const propertyUuid = searchParams.get('property_uuid') || '';
@@ -67,5 +67,13 @@ export default function CreateCustomerPage() {
         <CustomerForm onSubmit={handleSubmit} loading={loading} submitLabel="Create Customer" propertyUuid={propertyUuid} />
       </div>
     </div>
+  );
+}
+
+export default function CreateCustomerPage() {
+  return (
+    <Suspense fallback={<div className="p-6"><div className="h-8 bg-gray-100 rounded animate-pulse w-48 mb-4" /><div className="h-64 bg-gray-100 rounded animate-pulse" /></div>}>
+      <CreateCustomerPageInner />
+    </Suspense>
   );
 }

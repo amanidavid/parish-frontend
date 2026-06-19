@@ -12,7 +12,7 @@ import WelcomeModal from '@/components/dashboard/WelcomeModal';
  * - limited       → MyWorkspace (assigned resources only)
  */
 
-/* ─── Page ─── */
+/* --- Page --- */
 export default function DashboardPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);

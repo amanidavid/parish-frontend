@@ -8,14 +8,14 @@
  */
 import dynamic from 'next/dynamic';
 
-/* ── Lazy-loaded tab panels (code-split) ─────────────────────────────── */
+/* -- Lazy-loaded tab panels (code-split) ------------------------------- */
 export const FloorsTab = dynamic(() => import('@/components/properties/FloorsWorkspace'));
 export const ContractsTab = dynamic(() => import('@/components/properties/ContractsTab'));
 export const CustomersTab = dynamic(() => import('@/components/properties/CustomersTab'));
 export const MaintenanceTab = dynamic(() => import('@/components/properties/MaintenanceTab'));
 export const ReportsTab = dynamic(() => import('@/components/properties/ReportsTab'));
 
-/* ── Tab definitions ───────────────────────────────────────────────── */
+/* -- Tab definitions ------------------------------------------------- */
 export const PROPERTY_TABS = [
   { id: 'overview', label: 'Overview', lazy: false },
   { id: 'floors', label: 'Floors', lazy: true, permission: 'property_floors.view' },
@@ -29,7 +29,7 @@ export const DEFAULT_TAB = 'overview';
 
 export const VALID_TAB_IDS = PROPERTY_TABS.map((t) => t.id);
 
-/* ── Tab component resolver ────────────────────────────────────────── */
+/* -- Tab component resolver ------------------------------------------ */
 const TAB_COMPONENTS = {
   floors: FloorsTab,
   contracts: ContractsTab,

@@ -228,7 +228,7 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
         </nav>
       </div>
 
-      {/* ─── TAB 1: Billing Summary ─── mounted always, hidden when inactive */}
+      {/* --- TAB 1: Billing Summary --- mounted always, hidden when inactive */}
       <div className={activeTab !== 'summary' ? 'hidden' : 'space-y-5'}>
         {summaryError && (
           <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{summaryError}</div>
@@ -326,7 +326,7 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
         )}
       </div>
 
-      {/* ─── TAB 2: Property Cost Breakdown ─── mounted always, hidden when inactive */}
+      {/* --- TAB 2: Property Cost Breakdown --- mounted always, hidden when inactive */}
       <div className={activeTab !== 'properties' ? 'hidden' : 'space-y-4'}>
         {/* Header row with total cost badge */}
         <div className="flex flex-wrap items-center justify-between gap-3">

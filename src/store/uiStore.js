@@ -13,14 +13,14 @@ const useUiStore = create((set) => ({
   closeSlideOver: () => set({ activeSlideOver: null }),
   setNavigating: (v) => set({ isNavigating: v }),
 
-  /* ── Toast notification (lightweight fallback) ── */
+  /* -- Toast notification (lightweight fallback) -- */
   showNotification: (message, type = 'success') => {
     set({ notification: { message, type } });
     setTimeout(() => set({ notification: null }), 3500);
   },
   clearNotification: () => set({ notification: null }),
 
-  /* ── Modal notification (prominent, global) ── */
+  /* -- Modal notification (prominent, global) -- */
   showModal: (payload) => set({ modalNotification: payload }),
   closeModal: () => set({ modalNotification: null }),
 }));

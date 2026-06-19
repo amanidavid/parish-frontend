@@ -7,7 +7,7 @@ import useUiStore from '@/store/uiStore';
 import CountryCodePicker from '@/components/ui/CountryCodePicker';
 import { COUNTRY_CODES } from '@/constants/countryCodes';
 
-/* ── Helpers ─────────────────────────────────────────────────────── */
+/* -- Helpers ------------------------------------------------------- */
 function splitName(fullName = '') {
   const parts = fullName.trim().split(/\s+/);
   return {
@@ -38,7 +38,7 @@ function Field({ label, children, error }) {
   );
 }
 
-/* ── Page ──────────────────────────────────────────────────────────── */
+/* -- Page ------------------------------------------------------------ */
 export default function ProfilePage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -52,7 +52,7 @@ export default function ProfilePage() {
 
   const [country, setCountry] = useState(initialCountry);
 
-  /* ── Profile Form State ─────────────────────────────────────────── */
+  /* -- Profile Form State ------------------------------------------- */
   const [profile, setProfile] = useState({
     firstName: nameParts.firstName,
     lastName: nameParts.lastName,
@@ -62,7 +62,7 @@ export default function ProfilePage() {
   const [profileErrors, setProfileErrors] = useState({});
   const [profileSaving, setProfileSaving] = useState(false);
 
-  /* ── Password Form State ────────────────────────────────────────── */
+  /* -- Password Form State ------------------------------------------ */
   const [pw, setPw] = useState({
     current_password: '',
     password: '',
@@ -75,7 +75,7 @@ export default function ProfilePage() {
     useUiStore.getState().showModal({ type, message });
   }, []);
 
-  /* ── Profile Handlers ────────────────────────────────────────────── */
+  /* -- Profile Handlers ---------------------------------------------- */
   const onProfileChange = (e) => {
     const { name, value } = e.target;
     setProfile((p) => ({ ...p, [name]: value }));
@@ -116,7 +116,7 @@ export default function ProfilePage() {
     }
   };
 
-  /* ── Password Handlers ──────────────────────────────────────────── */
+  /* -- Password Handlers -------------------------------------------- */
   const onPwChange = (e) => {
     const { name, value } = e.target;
     setPw((p) => ({ ...p, [name]: value }));
@@ -144,7 +144,7 @@ export default function ProfilePage() {
     }
   };
 
-  /* ── Render ──────────────────────────────────────────────────────── */
+  /* -- Render -------------------------------------------------------- */
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -161,7 +161,7 @@ export default function ProfilePage() {
         <h1 className="text-xl font-bold text-gray-900">My Profile</h1>
       </div>
 
-      {/* ── Basic Information ────────────────────────────────────────── */}
+      {/* -- Basic Information ------------------------------------------ */}
       <form onSubmit={handleProfileSave} className="bg-white border border-gray-200 rounded-xl p-6 space-y-6">
         <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Basic Information</h2>
 
@@ -244,7 +244,7 @@ export default function ProfilePage() {
         </div>
       </form>
 
-      {/* ── Change Password ──────────────────────────────────────────── */}
+      {/* -- Change Password -------------------------------------------- */}
       <form onSubmit={handlePwSave} className="bg-white border border-gray-200 rounded-xl p-6 space-y-6">
         <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Change Password</h2>
 

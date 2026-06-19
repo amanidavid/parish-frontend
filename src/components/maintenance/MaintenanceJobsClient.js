@@ -12,7 +12,7 @@ import Pagination from '@/components/ui/Pagination';
 import useConfirmModal from '@/hooks/useConfirmModal';
 import useUiStore from '@/store/uiStore';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// --- Helpers -----------------------------------------------------------------
 function fmtAmt(n) {
   if (n === null || n === undefined) return '—';
   return Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -35,7 +35,7 @@ function fmtDate(d) {
 
 const EMPTY_FORM = { property_uuid: '', property_floor_uuid: '', unit_uuid: '', title: '', description: '', reported_date: '' };
 
-// ─── Summary Cards ────────────────────────────────────────────────────────────
+// --- Summary Cards ------------------------------------------------------------
 function SummaryCards({ totals, loading }) {
   const yr = new Date().getFullYear();
   const cards = [
@@ -67,7 +67,7 @@ function SummaryCards({ totals, loading }) {
   );
 }
 
-// ─── By Property Report Tab ───────────────────────────────────────────────────
+// --- By Property Report Tab ---------------------------------------------------
 function ByPropertyTab({ startDate, endDate }) {
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -135,7 +135,7 @@ function ByPropertyTab({ startDate, endDate }) {
   );
 }
 
-// ─── Recent Expenses Report Tab ───────────────────────────────────────────────
+// --- Recent Expenses Report Tab -----------------------------------------------
 function RecentExpensesTab({ startDate, endDate }) {
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -228,7 +228,7 @@ function RecentExpensesTab({ startDate, endDate }) {
   );
 }
 
-// ─── Jobs Tab ─────────────────────────────────────────────────────────────────
+// --- Jobs Tab -----------------------------------------------------------------
 function JobsTab({ startDate, endDate }) {
   const [jobs, setJobs] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -246,7 +246,7 @@ function JobsTab({ startDate, endDate }) {
   const [submitting, setSubmitting] = useState(false);
   const confirmModal = useConfirmModal();
 
-  // ── Load jobs ──
+  // -- Load jobs --
   const loadJobs = useCallback(async (pg, q) => {
     setLoading(true);
     const res = await MaintenanceService.jobsIndex({
@@ -263,14 +263,14 @@ function JobsTab({ startDate, endDate }) {
 
   useEffect(() => { setPage(1); setSearch(''); loadJobs(1, ''); }, [loadJobs]);
 
-  // ── Load properties for form ──
+  // -- Load properties for form --
   useEffect(() => {
     PropertyService.index({ per_page: 100 }).then((res) => {
       setProperties(res?.data?.data ?? res?.data ?? []);
     });
   }, []);
 
-  // ── Handlers ──
+  // -- Handlers --
   const handleSearch = useCallback((e) => {
     const val = e.target.value;
     setSearch(val);
@@ -283,7 +283,7 @@ function JobsTab({ startDate, endDate }) {
     loadJobs(pg, search);
   }, [search, loadJobs]);
 
-  // ── Modal helpers ──
+  // -- Modal helpers --
   const openCreate = useCallback(() => {
     setForm({ ...EMPTY_FORM, reported_date: new Date().toISOString().slice(0, 10) });
     setFloors([]);
@@ -519,7 +519,7 @@ function JobsTab({ startDate, endDate }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// --- Main Page ----------------------------------------------------------------
 const TABS = [
   { key: 'jobs', label: 'Jobs' },
   { key: 'by_property', label: 'By Property' },

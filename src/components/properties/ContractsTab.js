@@ -82,7 +82,7 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
   const customerInputRef = useRef(null);
   const customerDropdownRef = useRef(null);
 
-  /* ─── Unit search state ─── */
+  /* --- Unit search state --- */
   const [units, setUnits] = useState([]);
   const [unitsLoading, setUnitsLoading] = useState(false);
   const [unitSearch, setUnitSearch] = useState('');
