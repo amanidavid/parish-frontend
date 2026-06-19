@@ -44,7 +44,7 @@ function CreateCustomerPageInner() {
   };
 
   const backHref = propertyUuid ? `/properties/${propertyUuid}?tab=customers` : '/customers';
-  const backLabel = propertyUuid ? 'Back to Property' : 'Back to Customers';
+  const backLabel = propertyUuid ? 'Back' : 'Back to Customers';
 
   return (
     <div className="space-y-5">
