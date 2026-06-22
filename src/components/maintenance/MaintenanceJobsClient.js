@@ -9,6 +9,7 @@ import UnitService from '@/services/UnitService';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import Pagination from '@/components/ui/Pagination';
+import ActionMenu from '@/components/ui/ActionMenu';
 import useConfirmModal from '@/hooks/useConfirmModal';
 import useUiStore from '@/store/uiStore';
 
@@ -435,9 +436,18 @@ function JobsTab({ startDate, endDate }) {
                 <td className="px-4 py-3 text-gray-500 text-sm">{fmtDate(job.reported_date)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">
-                    <Link href={`/maintenance/${job.uuid}?return_to=${encodeURIComponent('/maintenance')}`} className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors">View</Link>
-                    <button onClick={() => openEdit(job)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">Edit</button>
-                    <button onClick={() => confirmModal.prompt(job)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button>
+                    <Link
+                      href={`/maintenance/${job.uuid}?return_to=${encodeURIComponent('/maintenance')}`}
+                      className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors"
+                    >
+                      View
+                    </Link>
+                    <ActionMenu
+                      actions={[
+                        { label: 'Edit', onClick: () => openEdit(job) },
+                        { label: 'Delete', onClick: () => confirmModal.prompt(job), danger: true },
+                      ]}
+                    />
                   </div>
                 </td>
               </tr>

@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ContractService from '@/services/ContractService';
 import CustomerService from '@/services/CustomerService';
 import UnitService from '@/services/UnitService';
 import Pagination from '@/components/ui/Pagination';
+import ActionMenu from '@/components/ui/ActionMenu';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useConfirmModal from '@/hooks/useConfirmModal';
@@ -20,16 +21,8 @@ const CONTRACT_STATUS = {
   active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700', color: '#22c55e' },
   expired: { label: 'Expired', bg: 'bg-orange-50', text: 'text-orange-700', color: '#f97316' },
   terminated: { label: 'Terminated', bg: 'bg-red-50', text: 'text-red-700', color: '#ef4444' },
-  renewed: { label: 'Renewed', bg: 'bg-blue-50', text: 'text-blue-700', color: '#3b82f6' },
 };
 
-const BILLING_CYCLES = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'quarterly', label: 'Quarterly' },
-  { value: 'semi_annually', label: 'Semi-annually' },
-  { value: 'annually', label: 'Annually' },
-  { value: 'one_time', label: 'One-time' },
-];
 
 function ContractStatusBadge({ status }) {
   const s = CONTRACT_STATUS[status] || CONTRACT_STATUS.draft;
@@ -64,7 +57,6 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
     end_date: '',
     amount: '',
     currency: 'TZS',
-    billing_cycle: 'monthly',
     status: 'draft',
     notes: '',
   };
@@ -103,7 +95,6 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
         end_date: initial.end_date || '',
         amount: initial.amount || '',
         currency: initial.currency || 'TZS',
-        billing_cycle: initial.billing_cycle || 'monthly',
         status: initial.status || 'draft',
         notes: initial.notes || '',
       });
@@ -261,10 +252,9 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
       unit_uuid: form.unit_uuid,
       contract_number: form.contract_number,
       start_date: form.start_date,
-      end_date: form.end_date || null,
+      end_date: form.end_date,
       amount: parseFloat(form.amount),
       currency: form.currency,
-      billing_cycle: form.billing_cycle,
       status: form.status,
       notes: form.notes || null,
     };
@@ -423,31 +413,33 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
             <FieldError message={errors?.unit_uuid?.[0]} />
           </div>
 
-          {/* Contract number */}
-          <div>
-            <label className="label">Contract Number <span className="text-red-500">*</span></label>
-            <input
-              name="contract_number"
-              type="text"
-              className="input text-sm"
-              placeholder="e.g. CTR-2024-001"
-              value={form.contract_number}
-              onChange={change}
-              required
-            />
-            <FieldError message={errors?.contract_number?.[0]} />
-          </div>
+          {isEdit && (
+            <>
+              {/* Contract number - editable on edit */}
+              <div>
+                <label className="label">Contract Number</label>
+                <input
+                  name="contract_number"
+                  type="text"
+                  className="input text-sm"
+                  value={form.contract_number}
+                  onChange={change}
+                />
+                <FieldError message={errors?.contract_number?.[0]} />
+              </div>
 
-          {/* Status */}
-          <div>
-            <label className="label">Status</label>
-            <select name="status" className="input text-sm" value={form.status} onChange={change}>
-              {Object.entries(CONTRACT_STATUS).map(([val, { label }]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-            <FieldError message={errors?.status?.[0]} />
-          </div>
+              {/* Status */}
+              <div>
+                <label className="label">Status</label>
+                <select name="status" className="input text-sm" value={form.status} onChange={change}>
+                  {Object.entries(CONTRACT_STATUS).map(([val, { label }]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+                <FieldError message={errors?.status?.[0]} />
+              </div>
+            </>
+          )}
 
           {/* Start date */}
           <div>
@@ -465,13 +457,14 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
 
           {/* End date */}
           <div>
-            <label className="label">End Date <span className="text-xs text-gray-400 font-normal ml-1">(optional)</span></label>
+            <label className="label">End Date <span className="text-red-500">*</span></label>
             <input
               name="end_date"
               type="date"
               className="input text-sm appearance-none min-h-[2.5rem]"
               value={form.end_date}
               onChange={change}
+              required
             />
             <FieldError message={errors?.end_date?.[0]} />
           </div>
@@ -506,17 +499,6 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
               onChange={change}
             />
             <FieldError message={errors?.currency?.[0]} />
-          </div>
-
-          {/* Billing cycle */}
-          <div>
-            <label className="label">Billing Cycle</label>
-            <select name="billing_cycle" className="input text-sm" value={form.billing_cycle} onChange={change}>
-              {BILLING_CYCLES.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
-            <FieldError message={errors?.billing_cycle?.[0]} />
           </div>
 
           {/* Notes */}
@@ -558,9 +540,10 @@ export default function ContractsTab({ propertyUuid }) {
   const confirmModal = useConfirmModal();
   const searchRef = useRef(null);
 
-  const canCreate = useCan(['customer_contracts.create', 'contract.create', 'contracts.create'], 'any');
-  const canEdit = useCan(['customer_contracts.update', 'contract.update', 'contracts.edit'], 'any');
-  const canDelete = useCan(['customer_contracts.delete', 'contract.delete', 'contracts.delete'], 'any');
+  const canCreate = useCan('customer_contracts.create');
+  const canView = useCan('customer_contracts.view');
+  const canEdit = useCan('customer_contracts.update');
+  const canDelete = useCan('customer_contracts.delete');
 
   const loadContracts = useCallback(() => {
     setLoading(true);
@@ -619,6 +602,13 @@ export default function ContractsTab({ propertyUuid }) {
   const fmtAmount = (amount, currency) =>
     amount != null ? `${currency || ''} ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
 
+  /* Contract summary counts */
+  const contractSummary = useMemo(() => {
+    const counts = { draft: 0, active: 0, expired: 0, terminated: 0, total: contracts.length };
+    contracts.forEach((c) => { if (counts[c.status] !== undefined) counts[c.status]++; });
+    return counts;
+  }, [contracts]);
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -671,6 +661,93 @@ export default function ContractsTab({ propertyUuid }) {
         )}
       </div>
 
+      {/* Contract Summary Cards — premium icon-based design */}
+      {!loading && contracts.length > 0 && (
+        <div className="relative">
+          <div
+            className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {[
+              {
+                key: 'total',
+                label: 'Total Contracts',
+                numColor: 'text-gray-900',
+                iconBg: 'bg-gray-50',
+                iconColor: 'text-gray-500',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'active',
+                label: 'Active',
+                numColor: 'text-emerald-600',
+                iconBg: 'bg-emerald-50',
+                iconColor: 'text-emerald-500',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'draft',
+                label: 'Draft',
+                numColor: 'text-slate-600',
+                iconBg: 'bg-slate-50',
+                iconColor: 'text-slate-500',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'expired',
+                label: 'Expired',
+                numColor: 'text-orange-600',
+                iconBg: 'bg-orange-50',
+                iconColor: 'text-orange-500',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'terminated',
+                label: 'Terminated',
+                numColor: 'text-red-600',
+                iconBg: 'bg-red-50',
+                iconColor: 'text-red-500',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+              },
+            ].map(({ key, label, numColor, iconBg, iconColor, icon }) => (
+              <div
+                key={key}
+                className="shrink-0 w-[150px] sm:flex-1 snap-start bg-white rounded-xl border border-gray-200 hover:border-primary-200 hover:shadow-sm transition-all px-4 py-3.5 flex items-center gap-3"
+              >
+                <div className={`shrink-0 w-10 h-10 rounded-lg ${iconBg} ${iconColor} flex items-center justify-center`}>
+                  {icon}
+                </div>
+                <div className="min-w-0">
+                  <p className={`${numColor} text-lg font-bold leading-tight tabular-nums`}>{contractSummary[key]}</p>
+                  <p className="text-[10px] font-medium text-gray-400 mt-0.5 truncate">{label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-[#f8fafc] to-transparent sm:hidden" />
+        </div>
+      )}
+
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12 text-gray-400 text-sm gap-2">
@@ -719,15 +796,33 @@ export default function ContractsTab({ propertyUuid }) {
                     </td>
                     <td className="px-5 py-3.5 text-gray-700 tabular-nums">{fmtAmount(c.amount, c.currency)}</td>
                     <td className="px-5 py-3.5 text-gray-500 text-xs whitespace-nowrap">
-                      {fmtDate(c.start_date)}{c.end_date ? ` → ${fmtDate(c.end_date)}` : ' → Open'}
+                      <div>{fmtDate(c.start_date)}{c.end_date ? ` → ${fmtDate(c.end_date)}` : ' → Open'}</div>
+                      {c.duration_label && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[10px] font-semibold">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          {c.duration_label}
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <ContractStatusBadge status={c.status} />
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {canEdit && <button className={BTN.gray} onClick={() => setContractModal(c)}>Edit</button>}
-                        {canDelete && <button className={BTN.red} onClick={() => confirmModal.prompt(c)}>Delete</button>}
+                      <div className="flex items-center justify-end gap-2">
+                        {canView && (
+                          <button
+                            onClick={() => setContractModal(c)}
+                            className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors"
+                          >
+                            View
+                          </button>
+                        )}
+                        <ActionMenu
+                          actions={[
+                            ...(canEdit ? [{ label: 'Edit', onClick: () => setContractModal(c) }] : []),
+                            ...(canDelete ? [{ label: 'Delete', onClick: () => confirmModal.prompt(c), danger: true }] : []),
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>

@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import AccessControlService from '@/services/AccessControlService';
+import Pagination from '@/components/ui/Pagination';
 
 /* Extract action from permission name: 'customers.create' -> 'Create' */
 function formatPermissionAction(name) {
@@ -9,61 +10,149 @@ function formatPermissionAction(name) {
   return action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function SkeletonRow() {
+  return (
+    <tr>
+      <td className="px-4 py-3"><div className="h-3 bg-gray-100 rounded animate-pulse w-8" /></td>
+      <td className="px-4 py-3"><div className="h-3 bg-gray-100 rounded animate-pulse w-24" /></td>
+      <td className="px-4 py-3"><div className="h-3 bg-gray-100 rounded animate-pulse w-20" /></td>
+      <td className="px-4 py-3"><div className="h-3 bg-gray-100 rounded animate-pulse w-32" /></td>
+    </tr>
+  );
+}
+
 export default function PermissionsTab() {
   const [permissions, setPermissions] = useState([]);
+  const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [search, setSearch] = useState('');
-  const [moduleFilter, setModuleFilter] = useState('');
+
+  /* All modules for dropdown (fetched once) */
+  const [allModules, setAllModules] = useState([]);
+
+  /* Debounced search states */
+  const [searchInput, setSearchInput] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [moduleInput, setModuleInput] = useState('');
+  const [appliedModule, setAppliedModule] = useState('');
+  const [moduleOpen, setModuleOpen] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const PER_PAGE = 15;
+
+  const searchTimerRef = useRef(null);
+  const moduleTimerRef = useRef(null);
+  const moduleWrapRef = useRef(null);
+
+  const DEBOUNCE_MS = 250;
+
+  const handleSearchChange = useCallback((e) => {
+    const val = e.target.value;
+    setSearchInput(val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setAppliedSearch(val.trim());
+    }, DEBOUNCE_MS);
+  }, []);
+
+  const handleModuleInputChange = useCallback((e) => {
+    const val = e.target.value;
+    setModuleInput(val);
+    setModuleOpen(true);
+    if (moduleTimerRef.current) clearTimeout(moduleTimerRef.current);
+    moduleTimerRef.current = setTimeout(() => {
+      setAppliedModule(val.trim().toLowerCase());
+    }, DEBOUNCE_MS);
+  }, []);
+
+  const selectModule = useCallback((mod) => {
+    setModuleInput(mod);
+    setAppliedModule(mod.toLowerCase());
+    setModuleOpen(false);
+  }, []);
+
+  const handleClear = useCallback(() => {
+    setSearchInput('');
+    setAppliedSearch('');
+    setModuleInput('');
+    setAppliedModule('');
+    setModuleOpen(false);
+    setPage(1);
+  }, []);
 
   useEffect(() => {
+    const onClick = (e) => {
+      if (moduleWrapRef.current && !moduleWrapRef.current.contains(e.target)) {
+        setModuleOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      if (moduleTimerRef.current) clearTimeout(moduleTimerRef.current);
+    };
+  }, []);
+
+  /* Fetch all unique modules once for the dropdown */
+  useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     AccessControlService.listPermissions({ perPage: 100 })
       .then((res) => {
         if (cancelled) return;
         if (res?.success) {
-          setPermissions(res.data || []);
-        } else {
-          setError(res?.message || 'Failed to load permissions');
+          const mods = [...new Set((res.data || []).map((p) => p.module).filter(Boolean))].sort();
+          setAllModules(mods);
         }
       })
-      .catch(() => setError('Network error'))
-      .finally(() => setLoading(false));
+      .catch(() => { });
     return () => { cancelled = true; };
   }, []);
 
-  const modules = useMemo(() => {
-    const set = new Set(permissions.map((p) => p.module).filter(Boolean));
-    return Array.from(set).sort();
-  }, [permissions]);
+  /* Server-side paginated fetch */
+  const fetchPermissions = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    AccessControlService.listPermissions({
+      page,
+      perPage: PER_PAGE,
+      search: appliedSearch || undefined,
+      module: appliedModule || undefined,
+    })
+      .then((res) => {
+        if (res?.success) {
+          setPermissions(res.data || []);
+          setMeta(res.meta || null);
+        } else {
+          setError(res?.message || 'Failed to load permissions');
+          setPermissions([]);
+          setMeta(null);
+        }
+      })
+      .catch(() => {
+        setError('Network error');
+        setPermissions([]);
+        setMeta(null);
+      })
+      .finally(() => setLoading(false));
+  }, [page, appliedSearch, appliedModule]);
 
-  const filtered = useMemo(() => {
-    let list = permissions;
-    if (moduleFilter) {
-      list = list.filter((p) => p.module === moduleFilter);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name?.toLowerCase().includes(q) ||
-          p.display_name?.toLowerCase().includes(q) ||
-          p.module?.toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [permissions, moduleFilter, search]);
+  useEffect(() => {
+    fetchPermissions();
+  }, [fetchPermissions]);
 
-  const grouped = useMemo(() => {
-    const groups = {};
-    for (const p of filtered) {
-      const mod = p.module || 'General';
-      if (!groups[mod]) groups[mod] = [];
-      groups[mod].push(p);
-    }
-    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered]);
+  const dropdownModules = useMemo(() => {
+    if (!moduleInput.trim()) return allModules;
+    const q = moduleInput.toLowerCase();
+    return allModules.filter((m) => m.toLowerCase().includes(q));
+  }, [allModules, moduleInput]);
+
+  /* Reset to page 1 when filters change */
+  useEffect(() => {
+    setPage(1);
+  }, [appliedSearch, appliedModule]);
+
+  const hasActiveFilters = appliedSearch || appliedModule;
 
   return (
     <div className="space-y-4">
@@ -74,60 +163,104 @@ export default function PermissionsTab() {
           <input
             type="text"
             placeholder="Search permissions..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-blue-500 focus:outline-none"
+            value={searchInput}
+            onChange={handleSearchChange}
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary-500 focus:outline-none transition-colors"
           />
         </div>
-        <select
-          value={moduleFilter}
-          onChange={(e) => setModuleFilter(e.target.value)}
-          className="py-2 px-3 rounded-lg border border-gray-200 text-sm focus:border-blue-500 focus:outline-none"
-        >
-          <option value="">All modules</option>
-          {modules.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-        <span className="text-xs text-gray-500 ml-auto">{filtered.length} permission{filtered.length !== 1 ? 's' : ''}</span>
+        <div ref={moduleWrapRef} className="relative flex-1 max-w-xs">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
+          <input
+            type="text"
+            placeholder="Filter by module..."
+            value={moduleInput}
+            onChange={handleModuleInputChange}
+            onFocus={() => setModuleOpen(true)}
+            className="w-full pl-9 pr-8 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary-500 focus:outline-none transition-colors"
+          />
+          <button
+            type="button"
+            onClick={() => setModuleOpen((o) => !o)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <svg className={`w-4 h-4 transition-transform ${moduleOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          {moduleOpen && (
+            <div className="absolute z-20 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-200 py-1 max-h-52 overflow-y-auto">
+              {dropdownModules.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-gray-400">No modules found</div>
+              ) : (
+                dropdownModules.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => selectModule(m)}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${appliedModule === m.toLowerCase() ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    {m}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+        {hasActiveFilters && (
+          <button
+            onClick={handleClear}
+            className="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+          >
+            Clear
+          </button>
+        )}
+        <span className="text-xs text-gray-500 ml-auto">{meta?.total ?? 0} permission{(meta?.total ?? 0) !== 1 ? 's' : ''}</span>
       </div>
 
-      {/* Grouped list */}
-      {loading ? (
-        <div className="space-y-4 animate-pulse">
-          {[1, 2].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-              <div className="h-4 w-24 bg-gray-100 rounded" />
-              <div className="h-8 bg-gray-100 rounded" />
-              <div className="h-8 bg-gray-100 rounded" />
-            </div>
-          ))}
+      {/* Table */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[520px]">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">#</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Module</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Action</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Permission Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
+              ) : error ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-12 text-red-600 text-sm">{error}</td>
+                </tr>
+              ) : permissions.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-12 text-gray-400 text-sm">
+                    {hasActiveFilters ? 'No permissions match your filters' : 'No permissions found'}
+                  </td>
+                </tr>
+              ) : (
+                permissions.map((p, idx) => (
+                  <tr key={p.id || p.name} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                    <td className="px-4 py-3 text-gray-400 text-xs tabular-nums">{(meta?.current_page ? (meta.current_page - 1) * PER_PAGE : 0) + idx + 1}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[11px] font-semibold">
+                        {p.module || '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-900 font-medium text-sm">{formatPermissionAction(p.name)}</td>
+                    <td className="px-4 py-3 text-gray-400 font-mono text-[11px]">{p.name}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      ) : error ? (
-        <p className="text-sm text-red-600 text-center py-8">{error}</p>
-      ) : grouped.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-8">No permissions found</p>
-      ) : (
-        <div className="space-y-3">
-          {grouped.map(([module, perms]) => (
-            <div key={module} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{module}</h4>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {perms.map((p) => (
-                  <div key={p.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{formatPermissionAction(p.name)}</p>
-                      <p className="text-[11px] text-gray-400 font-mono">{p.name}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        {meta && meta.last_page > 1 && (
+          <Pagination meta={meta} onPageChange={setPage} />
+        )}
+      </div>
     </div>
   );
 }

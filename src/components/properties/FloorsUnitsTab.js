@@ -6,6 +6,7 @@ import UnitService from '@/services/UnitService';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useConfirmModal from '@/hooks/useConfirmModal';
+import ActionMenu from '@/components/ui/ActionMenu';
 
 const UNIT_STATUS = {
   occupied: { label: 'Occupied', dot: 'bg-green-500', text: 'text-green-700', bg: 'bg-green-50' },
@@ -378,21 +379,12 @@ function FloorRow({ floor, propertyUuid, onFloorUpdated, onFloorDeleted, onNotif
                           >
                             Contracts
                           </Link>
-                          <button
-                            className="btn-secondary text-xs py-1 px-2.5"
-                            onClick={() => setEditUnit(unit)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-                            onClick={() => unitConfirm.prompt(unit)}
-                            title="Delete unit"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V4a1 1 0 011-1h6a1 1 0 011 1v3" />
-                            </svg>
-                          </button>
+                          <ActionMenu
+                            actions={[
+                              { label: 'Edit', onClick: () => setEditUnit(unit) },
+                              { label: 'Delete', onClick: () => unitConfirm.prompt(unit), danger: true },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

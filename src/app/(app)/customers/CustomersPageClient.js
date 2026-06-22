@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import CustomerService from '@/services/CustomerService';
 import Pagination from '@/components/ui/Pagination';
+import ActionMenu from '@/components/ui/ActionMenu';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useCan from '@/hooks/useCan';
 
@@ -54,7 +55,8 @@ export default function CustomersPageClient({ initialItems = [], initialMeta = n
   const hydratedInitialRef = useRef(Boolean(initialMeta) && !initialError);
 
   const canCreate = useCan('customers.create');
-  const canEdit = useCan('customers.edit');
+  const canView = useCan('customers.view');
+  const canEdit = useCan('customers.update');
   const canDelete = useCan('customers.delete');
 
   const fetchCustomers = useCallback(async () => {
@@ -209,10 +211,14 @@ export default function CustomersPageClient({ initialItems = [], initialMeta = n
                     </span>
                   </td>
                   <td className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Link href={`/customers/${customer.uuid}`} className={BTN.blue}>View</Link>
-                      {canEdit && <Link href={`/customers/${customer.uuid}/edit`} className={BTN.gray}>Edit</Link>}
-                      {canDelete && <button className={BTN.red} onClick={() => setDeleteTarget(customer)}>Delete</button>}
+                    <div className="flex items-center justify-end gap-2">
+                      {canView && <Link href={`/customers/${customer.uuid}`} className={BTN.blue}>View</Link>}
+                      <ActionMenu
+                        actions={[
+                          ...(canEdit ? [{ label: 'Edit', onClick: () => window.location.href = `/customers/${customer.uuid}/edit` }] : []),
+                          ...(canDelete ? [{ label: 'Delete', onClick: () => setDeleteTarget(customer), danger: true }] : []),
+                        ]}
+                      />
                     </div>
                   </td>
                 </tr>

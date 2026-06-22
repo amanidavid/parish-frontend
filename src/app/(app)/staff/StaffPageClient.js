@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import StaffService from '@/services/StaffService';
 import Pagination from '@/components/ui/Pagination';
+import ActionMenu from '@/components/ui/ActionMenu';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import StaffFormModal from '@/components/staff/StaffFormModal';
 import useCan from '@/hooks/useCan';
@@ -214,10 +215,14 @@ export default function StaffPageClient({ initialItems = [], initialMeta = null,
                   </div>
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                  <div className="flex items-center justify-end gap-1">
+                  <div className="flex items-center justify-end gap-2">
                     <Link href={`/staff/${member.uuid}`} className={BTN.gray}>View</Link>
-                    {canManage && <button className={BTN.gray} onClick={() => { setEditMember(member); setFormModalOpen(true); }}>Edit</button>}
-                    {canManage && <button className={BTN.red} onClick={() => setDeleteTarget(member)}>Delete</button>}
+                    <ActionMenu
+                      actions={[
+                        ...(canManage ? [{ label: 'Edit', onClick: () => { setEditMember(member); setFormModalOpen(true); } }] : []),
+                        ...(canManage ? [{ label: 'Delete', onClick: () => setDeleteTarget(member), danger: true }] : []),
+                      ]}
+                    />
                   </div>
                 </td>
               </tr>

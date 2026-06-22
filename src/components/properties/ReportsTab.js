@@ -211,7 +211,7 @@ export default function ReportsTab({ propertyUuid }) {
         period: contractPeriod === 'custom' ? 'month' : contractPeriod,
         metric: contractMetric,
         groupBy: 'property',
-        recognizedStatuses: ['active', 'renewed'],
+        recognizedStatuses: ['active'],
       };
       if (contractPeriod === 'custom') {
         payload.startDate = contractCustomStart;

@@ -12,7 +12,6 @@ const CONTRACT_STATUS = {
   active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700' },
   expired: { label: 'Expired', bg: 'bg-orange-50', text: 'text-orange-700' },
   terminated: { label: 'Terminated', bg: 'bg-red-50', text: 'text-red-700' },
-  renewed: { label: 'Renewed', bg: 'bg-blue-50', text: 'text-blue-700' },
 };
 
 function ContractStatusBadge({ status }) {
@@ -255,7 +254,13 @@ function ContractsContent() {
                   </td>
                   <td className="px-5 py-3.5 text-gray-700 tabular-nums text-sm">{fmtAmount(c.amount, c.currency)}</td>
                   <td className="px-5 py-3.5 text-gray-500 text-xs whitespace-nowrap">
-                    {fmtDate(c.start_date)}{c.end_date ? ` → ${fmtDate(c.end_date)}` : ' → Open'}
+                    <div>{fmtDate(c.start_date)}{c.end_date ? ` → ${fmtDate(c.end_date)}` : ' → Open'}</div>
+                    {c.duration_label && (
+                      <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[10px] font-semibold">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        {c.duration_label}
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-3.5"><ContractStatusBadge status={c.status} /></td>
                 </tr>

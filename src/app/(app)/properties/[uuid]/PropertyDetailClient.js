@@ -67,8 +67,6 @@ const ContractStatusList = memo(function ContractStatusList({ activeContracts = 
     { label: 'Active', color: 'bg-green-500', hex: '#22c55e', count: activeContracts },
     { label: 'Expired', color: 'bg-amber-500', hex: '#f59e0b', count: 0 },
     { label: 'Terminated', color: 'bg-red-500', hex: '#ef4444', count: 0 },
-    { label: 'Renewed', color: 'bg-purple-500', hex: '#a855f7', count: 0 },
-    { label: 'Pending', color: 'bg-cyan-500', hex: '#06b6d4', count: 0 },
   ];
   const total = statuses.reduce((sum, s) => sum + s.count, 0);
   const hasData = total > 0;

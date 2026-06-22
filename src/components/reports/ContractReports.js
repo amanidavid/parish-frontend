@@ -31,7 +31,6 @@ const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
   { value: 'expired', label: 'Expired' },
   { value: 'terminated', label: 'Terminated' },
-  { value: 'renewed', label: 'Renewed' },
 ];
 
 const BILLING_CYCLE_OPTIONS = [
