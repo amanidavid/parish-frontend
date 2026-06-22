@@ -5,6 +5,7 @@ import StaffPropertyAssignmentService from '@/services/StaffPropertyAssignmentSe
 import PropertyService from '@/services/PropertyService';
 import StaffService from '@/services/StaffService';
 import Pagination from '@/components/ui/Pagination';
+import ActionMenu from '@/components/ui/ActionMenu';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useCan from '@/hooks/useCan';
 
@@ -304,10 +305,12 @@ export default function StaffAssignmentsPage() {
                     </td>
                     <td className="px-5 py-3.5 text-gray-400 text-xs">{a.created_at ? new Date(a.created_at).toLocaleDateString() : '—'}</td>
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-end gap-1">
-                        {canEdit && <button onClick={() => { setEditAssignment(a); setModalOpen(true); }} className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors">Edit</button>}
-                        {canDelete && <button onClick={() => setDeleteTarget(a)} className="h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-red-500 hover:bg-red-50 transition-colors">Delete</button>}
-                      </div>
+                      <ActionMenu
+                        actions={[
+                          ...(canEdit ? [{ label: 'Edit', onClick: () => { setEditAssignment(a); setModalOpen(true); } }] : []),
+                          ...(canDelete ? [{ label: 'Delete', onClick: () => setDeleteTarget(a), danger: true }] : []),
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))

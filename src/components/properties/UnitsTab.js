@@ -4,6 +4,7 @@ import Link from 'next/link';
 import UnitService from '@/services/UnitService';
 import FloorService from '@/services/FloorService';
 import Pagination from '@/components/ui/Pagination';
+import ActionMenu from '@/components/ui/ActionMenu';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useConfirmModal from '@/hooks/useConfirmModal';
@@ -424,11 +425,13 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
                       <UnitStatusBadge status={unit.status} />
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link href={`/contracts?unit_uuid=${unit.uuid}&property_uuid=${propertyUuid}`} className={BTN.blue}>Contracts</Link>
-                        <button className={BTN.gray} onClick={() => setUnitModal(unit)}>Edit</button>
-                        <button className={BTN.red} onClick={() => confirmModal.prompt(unit)}>Delete</button>
-                      </div>
+                      <ActionMenu
+                        actions={[
+                          { label: 'Contracts', onClick: () => window.location.href = `/contracts?unit_uuid=${unit.uuid}&property_uuid=${propertyUuid}` },
+                          { label: 'Edit', onClick: () => setUnitModal(unit) },
+                          { label: 'Delete', onClick: () => confirmModal.prompt(unit), danger: true },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}

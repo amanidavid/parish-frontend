@@ -1,10 +1,14 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import CustomerService from '@/services/CustomerService';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import ActionMenu from '@/components/ui/ActionMenu';
+import Modal from '@/components/ui/Modal';
+import CustomerForm from '@/components/customers/CustomerForm';
 import useCan from '@/hooks/useCan';
+import useUiStore from '@/store/uiStore';
 
 const PER_PAGE = 15;
 
@@ -38,6 +42,53 @@ const BTN = {
   red: 'h-7 px-2 inline-flex items-center rounded text-xs font-medium text-red-500 hover:bg-red-50 transition-colors',
 };
 
+function CustomerModal({ open, onClose, initial, propertyUuid, onSaved }) {
+  const [loading, setLoading] = useState(false);
+  const isEdit = !!initial?.uuid;
+
+  const handleSubmit = async (payload) => {
+    setLoading(true);
+    try {
+      const data = isEdit
+        ? await CustomerService.update(initial.uuid, payload)
+        : await CustomerService.store(payload);
+      if (data?.success) {
+        useUiStore.getState().showModal({
+          type: 'success',
+          message: data?.message || (isEdit ? 'Customer updated.' : 'Customer created.'),
+        });
+        onSaved();
+        onClose();
+        return {};
+      }
+      useUiStore.getState().showModal({
+        type: 'error',
+        message: data?.message || (isEdit ? 'Failed to update customer.' : 'Failed to create customer.'),
+      });
+      return { errors: data?.errors || {} };
+    } catch {
+      useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' });
+      return {};
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <Modal open={open} onClose={onClose} title={isEdit ? 'Edit Customer' : 'New Customer'} maxWidth="max-w-2xl">
+      <CustomerForm
+        key={initial?.uuid || 'new'}
+        onSubmit={handleSubmit}
+        loading={loading}
+        submitLabel={isEdit ? 'Save Changes' : 'Create Customer'}
+        initial={isEdit ? initial : null}
+        propertyUuid={propertyUuid}
+      />
+    </Modal>
+  );
+}
+
 export default function CustomersTab({ propertyUuid }) {
   const [customers, setCustomers] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -50,10 +101,12 @@ export default function CustomersTab({ propertyUuid }) {
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [customerModal, setCustomerModal] = useState(null);
   const searchRef = useRef(null);
 
   const canCreate = useCan('customers.create');
-  const canEdit = useCan('customers.edit');
+  const canView = useCan('customers.view');
+  const canEdit = useCan('customers.update');
   const canDelete = useCan('customers.delete');
 
   const fetchCustomers = useCallback(async () => {
@@ -98,6 +151,13 @@ export default function CustomersTab({ propertyUuid }) {
     setStatusFilter('');
     setPage(1);
   };
+
+  /* Customer summary counts */
+  const customerSummary = useMemo(() => {
+    const counts = { total: customers.length, active: 0, inactive: 0 };
+    customers.forEach((c) => { if (counts[c.status] !== undefined) counts[c.status]++; });
+    return counts;
+  }, [customers]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -157,16 +217,79 @@ export default function CustomersTab({ propertyUuid }) {
         <div className="flex items-center gap-3">
           {meta && <p className="text-sm text-gray-400"><span className="font-medium text-gray-700">{meta.total ?? 0}</span> total</p>}
           {canCreate && (
-            <Link
-              href={`/customers/create?property_uuid=${propertyUuid}`}
+            <button
+              onClick={() => setCustomerModal('new')}
               className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               New Customer
-            </Link>
+            </button>
           )}
         </div>
       </div>
+
+      {/* Customer Summary Cards — premium icon-based design */}
+      {!loading && customers.length > 0 && (
+        <div className="relative">
+          <div
+            className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {[
+              {
+                key: 'total',
+                label: 'Total Customers',
+                numColor: 'text-gray-900',
+                iconBg: 'bg-gray-50',
+                iconColor: 'text-gray-500',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'active',
+                label: 'Active',
+                numColor: 'text-emerald-600',
+                iconBg: 'bg-emerald-50',
+                iconColor: 'text-emerald-500',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                ),
+              },
+              {
+                key: 'inactive',
+                label: 'Inactive',
+                numColor: 'text-slate-600',
+                iconBg: 'bg-slate-50',
+                iconColor: 'text-slate-500',
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                ),
+              },
+            ].map(({ key, label, numColor, iconBg, iconColor, icon }) => (
+              <div
+                key={key}
+                className="shrink-0 w-[150px] sm:flex-1 snap-start bg-white rounded-xl border border-gray-200 hover:border-primary-200 hover:shadow-sm transition-all px-4 py-3.5 flex items-center gap-3"
+              >
+                <div className={`shrink-0 w-10 h-10 rounded-lg ${iconBg} ${iconColor} flex items-center justify-center`}>
+                  {icon}
+                </div>
+                <div className="min-w-0">
+                  <p className={`${numColor} text-lg font-bold leading-tight tabular-nums`}>{customerSummary[key]}</p>
+                  <p className="text-[10px] font-medium text-gray-400 mt-0.5 truncate">{label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-[#f8fafc] to-transparent sm:hidden" />
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -222,10 +345,14 @@ export default function CustomersTab({ propertyUuid }) {
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={customer.status} /></td>
                     <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link href={`/customers/${customer.uuid}`} className={BTN.blue}>View</Link>
-                        {canEdit && <Link href={`/customers/${customer.uuid}/edit`} className={BTN.gray}>Edit</Link>}
-                        {canDelete && <button className={BTN.red} onClick={() => setDeleteTarget(customer)}>Delete</button>}
+                      <div className="flex items-center justify-end gap-2">
+                        {canView && <Link href={`/customers/${customer.uuid}`} className={BTN.blue}>View</Link>}
+                        <ActionMenu
+                          actions={[
+                            ...(canEdit ? [{ label: 'Edit', onClick: () => setCustomerModal(customer) }] : []),
+                            ...(canDelete ? [{ label: 'Delete', onClick: () => setDeleteTarget(customer), danger: true }] : []),
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -245,6 +372,14 @@ export default function CustomersTab({ propertyUuid }) {
         title="Delete Customer"
         message={`Delete "${deleteTarget?.display_name}"?`}
         confirmLabel="Delete Customer"
+      />
+
+      <CustomerModal
+        open={!!customerModal}
+        onClose={() => setCustomerModal(null)}
+        initial={customerModal === 'new' ? null : customerModal}
+        propertyUuid={propertyUuid}
+        onSaved={fetchCustomers}
       />
     </div>
   );

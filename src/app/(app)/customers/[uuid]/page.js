@@ -7,6 +7,7 @@ import ContractService from '@/services/ContractService';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useUiStore from '@/store/uiStore';
+import useCan from '@/hooks/useCan';
 
 const CUSTOMER_STATUS = {
   active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
@@ -18,7 +19,6 @@ const CONTRACT_STATUS = {
   active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700' },
   expired: { label: 'Expired', bg: 'bg-orange-50', text: 'text-orange-700' },
   terminated: { label: 'Terminated', bg: 'bg-red-50', text: 'text-red-700' },
-  renewed: { label: 'Renewed', bg: 'bg-blue-50', text: 'text-blue-700' },
 };
 
 function ContractStatusBadge({ status }) {
@@ -36,6 +36,9 @@ export default function CustomerDetailPage() {
   const tab = 'contracts';
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const canEdit = useCan('customers.update');
+  const canDelete = useCan('customers.delete');
 
   // Contracts tab state
   const [contracts, setContracts] = useState([]);
@@ -157,16 +160,16 @@ export default function CustomerDetailPage() {
             <p className="text-sm text-gray-500">{cap(customer?.customer_type)}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href={`/customers/${uuid}/edit`} className="btn-secondary text-sm">Edit</Link>
-            <button onClick={() => setDeleteOpen(true)} className="btn-danger text-sm">Delete</button>
+            {canEdit && <Link href={`/customers/${uuid}/edit`} className="btn-secondary text-sm">Edit</Link>}
+            {canDelete && <button onClick={() => setDeleteOpen(true)} className="btn-danger text-sm">Delete</button>}
           </div>
         </div>
         <div className="border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100">
           {[
             { label: 'Email', value: customer?.email },
             { label: 'Phone', value: customer?.phone },
+            { label: 'Member Since', value: customer?.created_at ? new Date(customer.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : null },
             { label: 'Contracts', value: customer?.contracts_count ?? 0, large: true },
-            { label: 'Notes', value: customer?.notes },
           ].map(({ label, value, large }) => (
             <div key={label} className="px-6 py-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
@@ -302,7 +305,13 @@ export default function CustomerDetailPage() {
                       </td>
                       <td className="px-5 py-3.5 text-gray-700 tabular-nums text-sm">{fmtAmount(c.amount, c.currency)}</td>
                       <td className="px-5 py-3.5 text-gray-500 text-xs whitespace-nowrap">
-                        {fmtDate(c.start_date)}{c.end_date ? ` → ${fmtDate(c.end_date)}` : ' → Open'}
+                        <div>{fmtDate(c.start_date)}{c.end_date ? ` → ${fmtDate(c.end_date)}` : ' → Open'}</div>
+                        {c.duration_label && (
+                          <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[10px] font-semibold">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            {c.duration_label}
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5"><ContractStatusBadge status={c.status} /></td>
                     </tr>

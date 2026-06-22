@@ -13,7 +13,6 @@ const STATUS_META = {
   draft: { label: 'Draft', color: 'bg-gray-50 text-gray-600 border-gray-200' },
   expired: { label: 'Expired', color: 'bg-red-50 text-red-700 border-red-200' },
   terminated: { label: 'Terminated', color: 'bg-orange-50 text-orange-700 border-orange-200' },
-  renewed: { label: 'Renewed', color: 'bg-blue-50 text-blue-700 border-blue-200' },
 };
 
 const KpiCard = React.memo(function KpiCard({ label, value, subtext, accent }) {
@@ -66,7 +65,6 @@ function SummaryTab({ data }) {
     { label: 'Draft', value: totals.draft_contracts_count, subtext: 'Pending activation', accent: 'text-gray-600' },
     { label: 'Expired', value: totals.expired_contracts_count, subtext: 'Ended contracts', accent: 'text-red-700' },
     { label: 'Terminated', value: totals.terminated_contracts_count, subtext: 'Cancelled early', accent: 'text-orange-700' },
-    { label: 'Renewed', value: totals.renewed_contracts_count, subtext: 'Extended contracts', accent: 'text-blue-700' },
   ] : null;
 
   if (!data) {

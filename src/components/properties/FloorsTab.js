@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import FloorService from '@/services/FloorService';
 import Pagination from '@/components/ui/Pagination';
+import ActionMenu from '@/components/ui/ActionMenu';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useConfirmModal from '@/hooks/useConfirmModal';
@@ -295,10 +296,19 @@ export default function FloorsTab({ propertyUuid, onViewUnits }) {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button className={BTN.blue} onClick={() => onViewUnits(floor)}>View Units</button>
-                        <button className={BTN.gray} onClick={() => setFloorModal(floor)}>Edit</button>
-                        <button className={BTN.red} onClick={() => confirmModal.prompt(floor)}>Delete</button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => onViewUnits(floor)}
+                          className="h-8 px-3 inline-flex items-center rounded text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          View Units
+                        </button>
+                        <ActionMenu
+                          actions={[
+                            { label: 'Edit', onClick: () => setFloorModal(floor) },
+                            { label: 'Delete', onClick: () => confirmModal.prompt(floor), danger: true },
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>

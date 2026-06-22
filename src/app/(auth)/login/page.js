@@ -66,7 +66,20 @@ export default function LoginPage() {
         }
         return;
       }
-      const { user, tenant, tenants, services } = data?.data || {};
+      const { user, tenant, tenants, services, challenge_id } = data?.data || {};
+
+      /* OTP challenge flow: redirect to verification page */
+      if (challenge_id) {
+        sessionStorage.setItem('last_auth_attempt', JSON.stringify({
+          payload: mode === 'phone'
+            ? { phone: form.phone, country_code: country.dialCode }
+            : { email: form.email },
+        }));
+        router.push(`/verify-otp?cid=${challenge_id}`);
+        return;
+      }
+
+      /* Direct auth flow: immediate login */
       if (user) {
         const tenantUuid = tenant?.tenant_uuid || tenants?.[0]?.tenant_uuid || null;
         /* Use backend services if available; otherwise fall back to DEMO_SERVICES for testing */

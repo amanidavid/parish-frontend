@@ -6,6 +6,7 @@ import MaintenanceService from '@/services/MaintenanceService';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import Pagination from '@/components/ui/Pagination';
+import ActionMenu from '@/components/ui/ActionMenu';
 import useConfirmModal from '@/hooks/useConfirmModal';
 import useUiStore from '@/store/uiStore';
 
@@ -202,10 +203,12 @@ export default function MaintenanceJobDetailClient({ uuid }) {
                   </td>
                   <td className="px-4 py-3 text-gray-500">{fmtDate(ex.expense_date)}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(ex)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">Edit</button>
-                      <button onClick={() => confirmModal.prompt(ex)} className="text-xs font-medium px-2.5 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button>
-                    </div>
+                    <ActionMenu
+                      actions={[
+                        { label: 'Edit', onClick: () => openEdit(ex) },
+                        { label: 'Delete', onClick: () => confirmModal.prompt(ex), danger: true },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

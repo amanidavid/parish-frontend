@@ -24,7 +24,6 @@ const STATUS_META = {
   draft: { label: 'Draft', className: 'bg-gray-50 text-gray-600 border-gray-200' },
   expired: { label: 'Expired', className: 'bg-red-50 text-red-700 border-red-200' },
   terminated: { label: 'Terminated', className: 'bg-orange-50 text-orange-700 border-orange-200' },
-  renewed: { label: 'Renewed', className: 'bg-blue-50 text-blue-700 border-blue-200' },
 };
 
 function DaysBadge({ days }) {

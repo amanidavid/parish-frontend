@@ -8,6 +8,7 @@ import ContractService from '@/services/ContractService';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
+import ActionMenu from '@/components/ui/ActionMenu';
 
 const PER_PAGE = 50;
 
@@ -241,7 +242,7 @@ function UnitModal({ open, onClose, onSaved, floorUuid, initial }) {
 /* -- Contract modal (create for a unit) ---------------------------- */
 function ContractModal({ open, onClose, onSaved, propertyUuid, unit }) {
   const [form, setForm] = useState({
-    customer_uuid: '', contract_number: '', start_date: '', end_date: '', amount: '', currency: 'TZS', billing_cycle: 'monthly', status: 'draft', notes: '',
+    customer_uuid: '', start_date: '', end_date: '', amount: '', currency: 'TZS', notes: '',
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -257,7 +258,7 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, unit }) {
 
   useEffect(() => {
     if (open) {
-      setForm({ customer_uuid: '', contract_number: '', start_date: '', end_date: '', amount: '', currency: 'TZS', billing_cycle: 'monthly', status: 'draft', notes: '' });
+      setForm({ customer_uuid: '', start_date: '', end_date: '', amount: '', currency: 'TZS', notes: '' });
       setSelectedCustomerName('');
       setCustomerSearch('');
       setCustomers([]);
@@ -302,13 +303,11 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, unit }) {
         customer_uuid: form.customer_uuid,
         unit_uuid: unit?.uuid,
         property_uuid: propertyUuid,
-        contract_number: form.contract_number.trim(),
         start_date: form.start_date || null,
-        end_date: form.end_date || null,
+        end_date: form.end_date,
         amount: form.amount ? Number(form.amount) : null,
         currency: form.currency,
-        billing_cycle: form.billing_cycle,
-        status: form.status,
+        status: 'draft',
         notes: form.notes.trim() || null,
       };
       const data = await ContractService.store(payload);
@@ -360,20 +359,14 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, unit }) {
               {errors.customer_uuid?.[0] && <p className="mt-1 text-xs text-red-600">{errors.customer_uuid[0]}</p>}
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Contract Number <span className="text-red-500">*</span></label>
-              <input type="text" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" placeholder="e.g. CTR-001" value={form.contract_number} onChange={(e) => setForm((p) => ({ ...p, contract_number: e.target.value }))} required />
-              {errors.contract_number?.[0] && <p className="mt-1 text-xs text-red-600">{errors.contract_number[0]}</p>}
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Start Date</label>
                 <input type="date" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" value={form.start_date} onChange={(e) => setForm((p) => ({ ...p, start_date: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">End Date</label>
-                <input type="date" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" value={form.end_date} onChange={(e) => setForm((p) => ({ ...p, end_date: e.target.value }))} />
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">End Date <span className="text-red-500">*</span></label>
+                <input type="date" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" value={form.end_date} onChange={(e) => setForm((p) => ({ ...p, end_date: e.target.value }))} required />
               </div>
             </div>
 
@@ -387,27 +380,6 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, unit }) {
                 <select className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" value={form.currency} onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value }))}>
                   <option value="TZS">TZS</option>
                   <option value="USD">USD</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Billing Cycle</label>
-                <select className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" value={form.billing_cycle} onChange={(e) => setForm((p) => ({ ...p, billing_cycle: e.target.value }))}>
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="semi_annually">Semi-Annually</option>
-                  <option value="annually">Annually</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Status</label>
-                <select className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}>
-                  <option value="draft">Draft</option>
-                  <option value="active">Active</option>
-                  <option value="expired">Expired</option>
-                  <option value="terminated">Terminated</option>
                 </select>
               </div>
             </div>
@@ -760,32 +732,13 @@ export default function FloorsWorkspace({ propertyUuid }) {
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  {canEditUnit && (
-                                    <button
-                                      onClick={() => setUnitModal(u)}
-                                      className="h-7 px-2 inline-flex items-center rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-                                    >
-                                      Edit
-                                    </button>
-                                  )}
-                                  {canCreateContract && (
-                                    <button
-                                      onClick={() => setContractModal(u)}
-                                      className="h-7 px-2 inline-flex items-center rounded text-xs font-medium text-primary-600 hover:bg-primary-50 transition-colors"
-                                    >
-                                      Contract
-                                    </button>
-                                  )}
-                                  {canDeleteUnit && (
-                                    <button
-                                      onClick={() => setDeleteUnitTarget(u)}
-                                      className="h-7 px-2 inline-flex items-center rounded text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
-                                    >
-                                      Delete
-                                    </button>
-                                  )}
-                                </div>
+                                <ActionMenu
+                                  actions={[
+                                    ...(canEditUnit ? [{ label: 'Edit', onClick: () => setUnitModal(u) }] : []),
+                                    ...(canCreateContract ? [{ label: 'Contract', onClick: () => setContractModal(u) }] : []),
+                                    ...(canDeleteUnit ? [{ label: 'Delete', onClick: () => setDeleteUnitTarget(u), danger: true }] : []),
+                                  ]}
+                                />
                               </td>
                             </tr>
                           ))}
