@@ -5,11 +5,11 @@ export function formatDate(dateStr) {
   });
 }
 
-export function formatCurrency(cents, currency = 'TZS') {
-  if (cents == null) return '—';
+export function formatCurrency(amount, currency = 'TZS') {
+  if (amount == null) return '—';
   return new Intl.NumberFormat('en-TZ', {
     style: 'currency', currency, minimumFractionDigits: 0,
-  }).format(cents / 100);
+  }).format(amount);
 }
 
 export function capitalize(str) {
