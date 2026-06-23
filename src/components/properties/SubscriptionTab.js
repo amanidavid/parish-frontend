@@ -17,9 +17,9 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function fmtAmt(cents, currency = 'TZS') {
-  if (cents === null || cents === undefined) return '—';
-  const n = Number(cents) / 100;
+function fmtAmt(amount, currency = 'TZS') {
+  if (amount === null || amount === undefined) return '—';
+  const n = Number(amount);
   return `${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
 }
 
@@ -139,8 +139,8 @@ function SubscriptionTab({ propertyUuid }) {
       {/* ===== Hero Status Banner ===== */}
       {(isActive || needsPayment) && (
         <div className={`relative overflow-hidden rounded-2xl ring-1 shadow-sm ${needsPayment
-            ? 'bg-gradient-to-br from-rose-50 via-white to-rose-50/40 ring-rose-200/70'
-            : 'bg-gradient-to-br from-emerald-50 via-white to-teal-50/40 ring-emerald-200/70'
+          ? 'bg-gradient-to-br from-rose-50 via-white to-rose-50/40 ring-rose-200/70'
+          : 'bg-gradient-to-br from-emerald-50 via-white to-teal-50/40 ring-emerald-200/70'
           }`}>
           <div className={`absolute -right-16 -top-16 w-56 h-56 rounded-full blur-3xl opacity-30 ${needsPayment ? 'bg-rose-300' : 'bg-emerald-300'}`} />
           <div className="relative px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-5">
@@ -197,13 +197,13 @@ function SubscriptionTab({ propertyUuid }) {
       {/* ===== Next Billing Preview ===== */}
       {billingPreview && (
         <div className={`overflow-hidden rounded-2xl ring-1 shadow-sm ${isIncrease ? 'ring-amber-200/70 bg-gradient-to-br from-amber-50/60 to-white'
-            : isDecrease ? 'ring-emerald-200/70 bg-gradient-to-br from-emerald-50/60 to-white'
-              : 'ring-gray-200/70 bg-white'
+          : isDecrease ? 'ring-emerald-200/70 bg-gradient-to-br from-emerald-50/60 to-white'
+            : 'ring-gray-200/70 bg-white'
           }`}>
           <div className="px-6 pt-5 pb-4 flex items-start gap-3">
             <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ring-1 ${isIncrease ? 'bg-amber-100 text-amber-600 ring-amber-200'
-                : isDecrease ? 'bg-emerald-100 text-emerald-600 ring-emerald-200'
-                  : 'bg-gray-100 text-gray-500 ring-gray-200'
+              : isDecrease ? 'bg-emerald-100 text-emerald-600 ring-emerald-200'
+                : 'bg-gray-100 text-gray-500 ring-gray-200'
               }`}>
               {isIncrease ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
