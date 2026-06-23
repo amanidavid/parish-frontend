@@ -546,6 +546,7 @@ export default function ContractsTab({ propertyUuid }) {
   const canDelete = useCan('customer_contracts.delete');
 
   const loadContracts = useCallback(() => {
+    if (!propertyUuid) { setContracts([]); setMeta(null); setLoading(false); return; }
     setLoading(true);
     ContractService.list({
       propertyUuid,

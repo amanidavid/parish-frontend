@@ -13,9 +13,10 @@ async function handler(request, context) {
   const token = jar.get('app_token')?.value;
   const tenantUuid = jar.get('tenant_uuid')?.value;
 
+  const hasBody = !['GET', 'HEAD'].includes(request.method);
   const headers = {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(tenantUuid ? { 'X-Tenant-Id': tenantUuid } : {}),
   };

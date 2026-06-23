@@ -29,6 +29,11 @@ const PropertyService = {
 
     delete normalized.search;
 
+    /* Only send page when beyond first page (page 1 is server default) */
+    if (normalized.page === 1 || normalized.page === '1') {
+      delete normalized.page;
+    }
+
     return apiFetch(`${BASE}${buildQuery(normalized)}`);
   },
 

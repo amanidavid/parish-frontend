@@ -184,6 +184,7 @@ export default function ReportsTab({ propertyUuid }) {
 
   // -- Load maintenance summary --
   const loadSummary = useCallback(async () => {
+    if (!propertyUuid) { setSummary(null); setSummaryLoading(false); return; }
     setSummaryLoading(true);
     try {
       const res = await MaintenanceService.summaryReport({

@@ -73,7 +73,7 @@ function FloorModal({ open, onClose, onSave, propertyUuid, initial }) {
         onClose();
       } else {
         if (data?.errors) setErrors(data.errors);
-        else setServerError(data?.message || 'Request failed. Please check your input and try again.');
+        setServerError(data?.message || 'Request failed. Please check your input and try again.');
       }
     } catch {
       setServerError('Network error');
@@ -169,7 +169,7 @@ function UnitModal({ open, onClose, onSave, floorUuid, initial }) {
         onClose();
       } else {
         if (data?.errors) setErrors(data.errors);
-        else setServerError(data?.message || 'Request failed. Please check your input and try again.');
+        setServerError(data?.message || 'Request failed. Please check your input and try again.');
       }
     } catch {
       setServerError('Network error');
@@ -455,8 +455,9 @@ export default function FloorsUnitsTab({ propertyUuid, onNotify }) {
   const [addFloor, setAddFloor] = useState(false);
 
   useEffect(() => {
+    if (!propertyUuid) { setFloors([]); setLoading(false); return; }
     FloorService.list(propertyUuid)
-      .then((data) => { if (data?.success) setFloors(data.data || []); })
+      .then((data) => { if (data?.success) setFloors([...(data.data || [])].sort((a, b) => (a.floor_number ?? 0) - (b.floor_number ?? 0))); })
       .catch(() => { })
       .finally(() => setLoading(false));
   }, [propertyUuid]);

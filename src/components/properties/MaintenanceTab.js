@@ -304,6 +304,7 @@ export default function MaintenanceTab({ propertyUuid }) {
   const [viewRepairUuid, setViewRepairUuid] = useState(null);
 
   const loadRepairs = useCallback(async (pg) => {
+    if (!propertyUuid) { setRepairs([]); setMeta(null); setLoading(false); return; }
     setLoading(true);
     try {
       const params = {
@@ -328,6 +329,7 @@ export default function MaintenanceTab({ propertyUuid }) {
   useEffect(() => { loadRepairs(1); }, [loadRepairs]);
 
   useEffect(() => {
+    if (!propertyUuid) { setTotalExpenses(0); return; }
     MaintenanceService.summaryReport({ property_uuid: propertyUuid }).then((res) => {
       const total = res?.data?.total_expenses ?? res?.data?.total_amount ?? res?.total_expenses ?? 0;
       setTotalExpenses(Number(total) || 0);
@@ -335,6 +337,7 @@ export default function MaintenanceTab({ propertyUuid }) {
   }, [propertyUuid]);
 
   useEffect(() => {
+    if (!propertyUuid) { setFloors([]); return; }
     FloorService.listAll(propertyUuid).then((res) => {
       setFloors(res?.data?.data ?? res?.data ?? []);
     });

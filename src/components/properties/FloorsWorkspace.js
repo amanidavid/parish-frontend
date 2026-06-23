@@ -82,7 +82,7 @@ function FloorModal({ open, onClose, onSaved, propertyUuid, initial }) {
         onClose();
       } else {
         if (data?.errors) setErrors(data.errors);
-        else setServerError(data?.message || 'Request failed. Please check your input and try again.');
+        setServerError(data?.message || 'Request failed. Please check your input and try again.');
       }
     } catch {
       setServerError('Network error');
@@ -440,6 +440,7 @@ export default function FloorsWorkspace({ propertyUuid }) {
 
   /* -- Load floors -- */
   const loadFloors = useCallback(async () => {
+    if (!propertyUuid) { setFloors([]); setMeta(null); setLoading(false); return; }
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     const { signal } = abortRef.current;
@@ -454,7 +455,7 @@ export default function FloorsWorkspace({ propertyUuid }) {
       });
       if (signal.aborted) return;
       if (data?.success) {
-        const items = data.data || [];
+        const items = [...(data.data || [])].sort((a, b) => (a.floor_number ?? 0) - (b.floor_number ?? 0));
         setFloors(items);
         setSelected((prev) => (prev ? items.find((f) => f.uuid === prev.uuid) || prev : prev));
       } else {
@@ -732,13 +733,23 @@ export default function FloorsWorkspace({ propertyUuid }) {
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-right">
-                                <ActionMenu
-                                  actions={[
-                                    ...(canEditUnit ? [{ label: 'Edit', onClick: () => setUnitModal(u) }] : []),
-                                    ...(canCreateContract ? [{ label: 'Contract', onClick: () => setContractModal(u) }] : []),
-                                    ...(canDeleteUnit ? [{ label: 'Delete', onClick: () => setDeleteUnitTarget(u), danger: true }] : []),
-                                  ]}
-                                />
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {canCreateContract && (
+                                    <button
+                                      onClick={() => setContractModal(u)}
+                                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 transition-colors whitespace-nowrap"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                      Contract
+                                    </button>
+                                  )}
+                                  <ActionMenu
+                                    actions={[
+                                      ...(canEditUnit ? [{ label: 'Edit', onClick: () => setUnitModal(u) }] : []),
+                                      ...(canDeleteUnit ? [{ label: 'Delete', onClick: () => setDeleteUnitTarget(u), danger: true }] : []),
+                                    ]}
+                                  />
+                                </div>
                               </td>
                             </tr>
                           ))}

@@ -13,6 +13,7 @@ import {
   CustomersTab,
   MaintenanceTab,
   ReportsTab,
+  SubscriptionTab,
 } from '@/modules/properties/propertiesModule';
 import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
@@ -132,17 +133,17 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   const canViewMaintenance = useCan('maintenance_jobs.view');
   const canViewReports = useCan('reports.view');
 
-  const permissionMap = {
+  const permissionMap = useMemo(() => ({
     floors: canViewFloors,
     contracts: canViewContracts,
     customers: canViewCustomers,
     maintenance: canViewMaintenance,
     reports: canViewReports,
-  };
+  }), [canViewFloors, canViewContracts, canViewCustomers, canViewMaintenance, canViewReports]);
 
   const visibleTabs = useMemo(() =>
     PROPERTY_TABS.filter((t) => !t.permission || permissionMap[t.id]),
-    [canViewFloors, canViewContracts, canViewCustomers, canViewMaintenance, canViewReports]
+    [permissionMap]
   );
 
   /* Ensure active tab is visible; fallback if permission revoked */
@@ -163,6 +164,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   /* Fallback client-side fetch — only runs if SSR did not provide property data */
   useEffect(() => {
     if (property || error) return;
+    if (!uuid) { setLoading(false); return; }
     setLoading(true);
     PropertyService.show(uuid)
       .then((data) => {
@@ -183,10 +185,6 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
     });
     setTab(tabId);
   }, []);
-
-  const handleTabChange = (tabId) => {
-    activateTab(tabId);
-  };
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -268,7 +266,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
             return (
               <button
                 key={t.id}
-                onClick={() => handleTabChange(t.id)}
+                onClick={() => activateTab(t.id)}
                 className={`shrink-0 px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${isActive
                   ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
                   : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
@@ -383,6 +381,13 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
       {mountedTabs.has('reports') && (
         <div className={tab !== 'reports' ? 'hidden' : ''}>
           <ReportsTab propertyUuid={uuid} />
+        </div>
+      )}
+
+      {/* Subscription tab */}
+      {mountedTabs.has('subscription') && (
+        <div className={tab !== 'subscription' ? 'hidden' : ''}>
+          <SubscriptionTab propertyUuid={uuid} />
         </div>
       )}
 

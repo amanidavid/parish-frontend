@@ -14,6 +14,7 @@ export const ContractsTab = dynamic(() => import('@/components/properties/Contra
 export const CustomersTab = dynamic(() => import('@/components/properties/CustomersTab'));
 export const MaintenanceTab = dynamic(() => import('@/components/properties/MaintenanceTab'));
 export const ReportsTab = dynamic(() => import('@/components/properties/ReportsTab'));
+export const SubscriptionTab = dynamic(() => import('@/components/properties/SubscriptionTab'));
 
 /* -- Tab definitions ------------------------------------------------- */
 export const PROPERTY_TABS = [
@@ -22,6 +23,7 @@ export const PROPERTY_TABS = [
   { id: 'contracts', label: 'Contracts', lazy: true, permission: ['customer_contracts.view', 'contract.view', 'contracts.view'] },
   { id: 'customers', label: 'Customers', lazy: true, permission: 'customers.view' },
   { id: 'maintenance', label: 'Maintenance', lazy: true, permission: 'maintenance_jobs.view' },
+  { id: 'subscription', label: 'Subscription', lazy: true },
   { id: 'reports', label: 'Reports', lazy: true, permission: 'reports.view' },
 ];
 
@@ -36,6 +38,7 @@ const TAB_COMPONENTS = {
   customers: CustomersTab,
   maintenance: MaintenanceTab,
   reports: ReportsTab,
+  subscription: SubscriptionTab,
 };
 
 /**

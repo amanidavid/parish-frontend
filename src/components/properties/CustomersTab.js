@@ -110,6 +110,7 @@ export default function CustomersTab({ propertyUuid }) {
   const canDelete = useCan('customers.delete');
 
   const fetchCustomers = useCallback(async () => {
+    if (!propertyUuid) { setCustomers([]); setMeta(null); setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
