@@ -1,8 +1,9 @@
 const STYLES = {
-  active:   'bg-green-50 text-green-700 ring-green-200',
+  active: 'bg-green-50 text-green-700 ring-green-200',
   inactive: 'bg-gray-100 text-gray-500 ring-gray-200',
-  pending:  'bg-yellow-50 text-yellow-700 ring-yellow-200',
-  expired:  'bg-red-50 text-red-600 ring-red-200',
+  pending: 'bg-yellow-50 text-yellow-700 ring-yellow-200',
+  expired: 'bg-red-50 text-red-600 ring-red-200',
+  unsubscribed: 'bg-orange-50 text-orange-700 ring-orange-200',
 };
 
 export default function StatusBadge({ status }) {

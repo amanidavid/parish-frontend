@@ -9,6 +9,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { usePropertyAccess } from '@/contexts/PropertyAccessContext';
 
 const PER_PAGE = 50;
 
@@ -436,6 +437,14 @@ export default function FloorsWorkspace({ propertyUuid }) {
   const canDeleteUnit = useCan('units.delete');
   const canCreateContract = useCan(['customer_contracts.create', 'contract.create', 'contracts.create'], 'any');
 
+  const access = usePropertyAccess();
+  const workspaceBlocked = access?.workspace?.allowed === false;
+  const propertyBlocked = access?.property_subscription?.allowed === false;
+  const opsBlocked = workspaceBlocked || propertyBlocked;
+  const opsMessage = workspaceBlocked
+    ? access?.workspace?.message
+    : (propertyBlocked ? access?.property_subscription?.message : '');
+
   const abortRef = useRef(null);
 
   /* -- Load floors -- */
@@ -573,7 +582,12 @@ export default function FloorsWorkspace({ propertyUuid }) {
           <div className="p-3 border-b border-gray-100 space-y-2">
             <div className="flex items-center gap-2">
               {canCreateFloor && (
-                <button onClick={() => setFloorModal('new')} className="btn-primary text-xs inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                <button
+                  onClick={() => setFloorModal('new')}
+                  disabled={opsBlocked}
+                  title={opsBlocked ? opsMessage : undefined}
+                  className="btn-primary text-xs inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   New Floor
                 </button>
@@ -664,8 +678,22 @@ export default function FloorsWorkspace({ propertyUuid }) {
                   <p className="text-xs text-gray-400">Floor {selected.floor_number} · {selected.units_count ?? 0} units</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {canEditFloor && <button onClick={() => setFloorModal(selected)} className="h-8 px-3 inline-flex items-center rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors">Edit</button>}
-                  {canDeleteFloor && <button onClick={() => setDeleteTarget(selected)} className="h-8 px-3 inline-flex items-center rounded text-xs font-medium text-red-500 hover:bg-red-50 transition-colors">Delete</button>}
+                  {canEditFloor && (
+                    <button
+                      onClick={() => setFloorModal(selected)}
+                      disabled={opsBlocked}
+                      title={opsBlocked ? opsMessage : undefined}
+                      className="h-8 px-3 inline-flex items-center rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >Edit</button>
+                  )}
+                  {canDeleteFloor && (
+                    <button
+                      onClick={() => setDeleteTarget(selected)}
+                      disabled={opsBlocked}
+                      title={opsBlocked ? opsMessage : undefined}
+                      className="h-8 px-3 inline-flex items-center rounded text-xs font-medium text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >Delete</button>
+                  )}
                 </div>
               </div>
 
@@ -680,7 +708,12 @@ export default function FloorsWorkspace({ propertyUuid }) {
                         <p className="text-xs text-gray-400">{units.length} unit{units.length !== 1 ? 's' : ''}</p>
                       </div>
                       {canCreateUnit && (
-                        <button onClick={() => setUnitModal('new')} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors shrink-0 whitespace-nowrap">
+                        <button
+                          onClick={() => setUnitModal('new')}
+                          disabled={opsBlocked}
+                          title={opsBlocked ? opsMessage : undefined}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors shrink-0 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                           New Unit
                         </button>
@@ -737,7 +770,9 @@ export default function FloorsWorkspace({ propertyUuid }) {
                                   {canCreateContract && (
                                     <button
                                       onClick={() => setContractModal(u)}
-                                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 transition-colors whitespace-nowrap"
+                                      disabled={opsBlocked}
+                                      title={opsBlocked ? opsMessage : undefined}
+                                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary-600 bg-primary-50 hover:bg-primary-100 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                       Contract
@@ -745,8 +780,8 @@ export default function FloorsWorkspace({ propertyUuid }) {
                                   )}
                                   <ActionMenu
                                     actions={[
-                                      ...(canEditUnit ? [{ label: 'Edit', onClick: () => setUnitModal(u) }] : []),
-                                      ...(canDeleteUnit ? [{ label: 'Delete', onClick: () => setDeleteUnitTarget(u), danger: true }] : []),
+                                      ...(canEditUnit ? [{ label: 'Edit', onClick: () => setUnitModal(u), disabled: opsBlocked }] : []),
+                                      ...(canDeleteUnit ? [{ label: 'Delete', onClick: () => setDeleteUnitTarget(u), danger: true, disabled: opsBlocked }] : []),
                                     ]}
                                   />
                                 </div>
@@ -769,7 +804,12 @@ export default function FloorsWorkspace({ propertyUuid }) {
         !selected && (
           <div className="md:hidden flex justify-end">
             {canCreateFloor && (
-              <button onClick={() => setFloorModal('new')} className="btn-primary text-sm inline-flex items-center gap-1.5">
+              <button
+                onClick={() => setFloorModal('new')}
+                disabled={opsBlocked}
+                title={opsBlocked ? opsMessage : undefined}
+                className="btn-primary text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                 New Floor
               </button>

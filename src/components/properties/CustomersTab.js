@@ -9,6 +9,7 @@ import Modal from '@/components/ui/Modal';
 import CustomerForm from '@/components/customers/CustomerForm';
 import useCan from '@/hooks/useCan';
 import useUiStore from '@/store/uiStore';
+import { usePropertyAccess } from '@/contexts/PropertyAccessContext';
 
 const PER_PAGE = 15;
 
@@ -108,6 +109,14 @@ export default function CustomersTab({ propertyUuid }) {
   const canView = useCan('customers.view');
   const canEdit = useCan('customers.update');
   const canDelete = useCan('customers.delete');
+
+  const access = usePropertyAccess();
+  const workspaceBlocked = access?.workspace?.allowed === false;
+  const propertyBlocked = access?.property_subscription?.allowed === false;
+  const opsBlocked = workspaceBlocked || propertyBlocked;
+  const opsMessage = workspaceBlocked
+    ? access?.workspace?.message
+    : (propertyBlocked ? access?.property_subscription?.message : '');
 
   const fetchCustomers = useCallback(async () => {
     if (!propertyUuid) { setCustomers([]); setMeta(null); setLoading(false); return; }
@@ -220,7 +229,9 @@ export default function CustomersTab({ propertyUuid }) {
           {canCreate && (
             <button
               onClick={() => setCustomerModal('new')}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+              disabled={opsBlocked}
+              title={opsBlocked ? opsMessage : undefined}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               New Customer
@@ -350,8 +361,8 @@ export default function CustomersTab({ propertyUuid }) {
                         {canView && <Link href={`/customers/${customer.uuid}`} className={BTN.blue}>View</Link>}
                         <ActionMenu
                           actions={[
-                            ...(canEdit ? [{ label: 'Edit', onClick: () => setCustomerModal(customer) }] : []),
-                            ...(canDelete ? [{ label: 'Delete', onClick: () => setDeleteTarget(customer), danger: true }] : []),
+                            ...(canEdit ? [{ label: 'Edit', onClick: () => setCustomerModal(customer), disabled: opsBlocked }] : []),
+                            ...(canDelete ? [{ label: 'Delete', onClick: () => setDeleteTarget(customer), danger: true, disabled: opsBlocked }] : []),
                           ]}
                         />
                       </div>
