@@ -63,7 +63,7 @@ function FloorModal({ open, onClose, onSaved, propertyUuid, initial }) {
         onClose();
       } else {
         if (data?.errors) setErrors(data.errors);
-        else setServerError(data?.message || 'Request failed. Please check your input and try again.');
+        setServerError(data?.message || 'Request failed. Please check your input and try again.');
       }
     } catch {
       setServerError('Network error');
@@ -141,6 +141,7 @@ export default function FloorsTab({ propertyUuid, onViewUnits }) {
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   const loadFloors = useCallback(async () => {
+    if (!propertyUuid) { setFloors([]); setMeta(null); setLoading(false); return; }
     /* Cancel previous in-flight request — prevents stale-data race conditions */
     abortRef.current?.abort();
     abortRef.current = new AbortController();
@@ -155,7 +156,7 @@ export default function FloorsTab({ propertyUuid, onViewUnits }) {
       });
       if (signal.aborted) return;
       if (data?.success) {
-        setFloors(data.data || []);
+        setFloors([...(data.data || [])].sort((a, b) => (a.floor_number ?? 0) - (b.floor_number ?? 0)));
         setMeta(data.meta || null);
       } else {
         useUiStore.getState().showModal({ type: 'error', message: data?.message || 'Failed to load floors' });

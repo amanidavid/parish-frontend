@@ -10,6 +10,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import useConfirmModal from '@/hooks/useConfirmModal';
 import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
+import { usePropertyAccess } from '@/contexts/PropertyAccessContext';
 
 const BTN = {
   gray: 'h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors',
@@ -545,7 +546,16 @@ export default function ContractsTab({ propertyUuid }) {
   const canEdit = useCan('customer_contracts.update');
   const canDelete = useCan('customer_contracts.delete');
 
+  const access = usePropertyAccess();
+  const workspaceBlocked = access?.workspace?.allowed === false;
+  const propertyBlocked = access?.property_subscription?.allowed === false;
+  const opsBlocked = workspaceBlocked || propertyBlocked;
+  const opsMessage = workspaceBlocked
+    ? access?.workspace?.message
+    : (propertyBlocked ? access?.property_subscription?.message : '');
+
   const loadContracts = useCallback(() => {
+    if (!propertyUuid) { setContracts([]); setMeta(null); setLoading(false); return; }
     setLoading(true);
     ContractService.list({
       propertyUuid,
@@ -652,7 +662,12 @@ export default function ContractsTab({ propertyUuid }) {
           </select>
         </div>
         {canCreate && (
-          <button className="btn-primary text-sm" onClick={() => setContractModal('new')}>
+          <button
+            className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => setContractModal('new')}
+            disabled={opsBlocked}
+            title={opsBlocked ? opsMessage : undefined}
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -812,15 +827,17 @@ export default function ContractsTab({ propertyUuid }) {
                         {canView && (
                           <button
                             onClick={() => setContractModal(c)}
-                            className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors"
+                            disabled={opsBlocked}
+                            title={opsBlocked ? opsMessage : undefined}
+                            className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             View
                           </button>
                         )}
                         <ActionMenu
                           actions={[
-                            ...(canEdit ? [{ label: 'Edit', onClick: () => setContractModal(c) }] : []),
-                            ...(canDelete ? [{ label: 'Delete', onClick: () => confirmModal.prompt(c), danger: true }] : []),
+                            ...(canEdit ? [{ label: 'Edit', onClick: () => setContractModal(c), disabled: opsBlocked }] : []),
+                            ...(canDelete ? [{ label: 'Delete', onClick: () => confirmModal.prompt(c), danger: true, disabled: opsBlocked }] : []),
                           ]}
                         />
                       </div>

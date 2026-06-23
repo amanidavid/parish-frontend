@@ -7,9 +7,9 @@ const FloorService = {
     const query = new URLSearchParams({
       property_uuid: propertyUuid,
       per_page: params.perPage || 15,
-      sort: 'floor_number',
     });
     if (params.search) query.set('search', params.search);
+    if (params.sort) query.set('sort', params.sort);
     if (params.page && params.page > 1) query.set('page', params.page);
     return apiFetch(`${BASE}?${query}`, {
       ...(params.signal ? { signal: params.signal } : {}),
@@ -18,7 +18,7 @@ const FloorService = {
 
   async listAll(propertyUuid, params = {}) {
     return apiFetch(
-      `${BASE}?property_uuid=${propertyUuid}&per_page=100&sort=floor_number`,
+      `${BASE}?property_uuid=${propertyUuid}&per_page=100`,
       { ...(params.signal ? { signal: params.signal } : {}) },
     );
   },

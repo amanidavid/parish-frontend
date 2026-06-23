@@ -9,6 +9,7 @@ import Pagination from '@/components/ui/Pagination';
 import ActionMenu from '@/components/ui/ActionMenu';
 import useConfirmModal from '@/hooks/useConfirmModal';
 import useUiStore from '@/store/uiStore';
+import { usePropertyAccess } from '@/contexts/PropertyAccessContext';
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -51,6 +52,14 @@ const EMPTY_EXPENSE = { title: '', description: '', amount: '', expense_date: ''
 function RepairDetail({ repairUuid, propertyUuid, onBack }) {
   const [repair, setRepair] = useState(null);
   const [repairLoading, setRepairLoading] = useState(true);
+
+  const access = usePropertyAccess();
+  const workspaceBlocked = access?.workspace?.allowed === false;
+  const propertyBlocked = access?.property_subscription?.allowed === false;
+  const opsBlocked = workspaceBlocked || propertyBlocked;
+  const opsMessage = workspaceBlocked
+    ? access?.workspace?.message
+    : (propertyBlocked ? access?.property_subscription?.message : '');
 
   const [expenses, setExpenses] = useState([]);
   const [expensesMeta, setExpensesMeta] = useState(null);
@@ -178,7 +187,12 @@ function RepairDetail({ repairUuid, propertyUuid, onBack }) {
               <span className="font-semibold text-gray-700">{expensesMeta.total ?? 0}</span> expenses
             </span>
           )}
-          <button onClick={openCreateExpense} className="btn-primary text-sm py-2">New Expense</button>
+          <button
+            onClick={openCreateExpense}
+            disabled={opsBlocked}
+            title={opsBlocked ? opsMessage : undefined}
+            className="btn-primary text-sm py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >New Expense</button>
         </div>
       </div>
 
@@ -218,8 +232,8 @@ function RepairDetail({ repairUuid, propertyUuid, onBack }) {
                     <td className="px-4 py-3 text-right">
                       <ActionMenu
                         actions={[
-                          { label: 'Edit', onClick: () => openEditExpense(ex) },
-                          { label: 'Delete', onClick: () => confirmModal.prompt(ex), danger: true },
+                          { label: 'Edit', onClick: () => openEditExpense(ex), disabled: opsBlocked },
+                          { label: 'Delete', onClick: () => confirmModal.prompt(ex), danger: true, disabled: opsBlocked },
                         ]}
                       />
                     </td>
@@ -301,9 +315,18 @@ export default function MaintenanceTab({ propertyUuid }) {
   const [units, setUnits] = useState([]);
   const confirmModal = useConfirmModal();
 
+  const access = usePropertyAccess();
+  const workspaceBlocked = access?.workspace?.allowed === false;
+  const propertyBlocked = access?.property_subscription?.allowed === false;
+  const opsBlocked = workspaceBlocked || propertyBlocked;
+  const opsMessage = workspaceBlocked
+    ? access?.workspace?.message
+    : (propertyBlocked ? access?.property_subscription?.message : '');
+
   const [viewRepairUuid, setViewRepairUuid] = useState(null);
 
   const loadRepairs = useCallback(async (pg) => {
+    if (!propertyUuid) { setRepairs([]); setMeta(null); setLoading(false); return; }
     setLoading(true);
     try {
       const params = {
@@ -328,6 +351,7 @@ export default function MaintenanceTab({ propertyUuid }) {
   useEffect(() => { loadRepairs(1); }, [loadRepairs]);
 
   useEffect(() => {
+    if (!propertyUuid) { setTotalExpenses(0); return; }
     MaintenanceService.summaryReport({ property_uuid: propertyUuid }).then((res) => {
       const total = res?.data?.total_expenses ?? res?.data?.total_amount ?? res?.total_expenses ?? 0;
       setTotalExpenses(Number(total) || 0);
@@ -335,6 +359,7 @@ export default function MaintenanceTab({ propertyUuid }) {
   }, [propertyUuid]);
 
   useEffect(() => {
+    if (!propertyUuid) { setFloors([]); return; }
     FloorService.listAll(propertyUuid).then((res) => {
       setFloors(res?.data?.data ?? res?.data ?? []);
     });
@@ -455,7 +480,12 @@ export default function MaintenanceTab({ propertyUuid }) {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={openCreate} className="btn-primary text-xs px-3 py-1.5 inline-flex items-center gap-1">
+          <button
+            onClick={openCreate}
+            disabled={opsBlocked}
+            title={opsBlocked ? opsMessage : undefined}
+            className="btn-primary text-xs px-3 py-1.5 inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             New Repair
           </button>
@@ -599,8 +629,8 @@ export default function MaintenanceTab({ propertyUuid }) {
                         </button>
                         <ActionMenu
                           actions={[
-                            { label: 'Edit', onClick: () => openEdit(repair) },
-                            { label: 'Delete', onClick: () => confirmModal.prompt(repair), danger: true },
+                            { label: 'Edit', onClick: () => openEdit(repair), disabled: opsBlocked },
+                            { label: 'Delete', onClick: () => confirmModal.prompt(repair), danger: true, disabled: opsBlocked },
                           ]}
                         />
                       </div>

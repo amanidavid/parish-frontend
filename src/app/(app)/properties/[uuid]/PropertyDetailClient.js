@@ -13,9 +13,12 @@ import {
   CustomersTab,
   MaintenanceTab,
   ReportsTab,
+  SubscriptionTab,
 } from '@/modules/properties/propertiesModule';
 import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
+import { PropertyAccessProvider } from '@/contexts/PropertyAccessContext';
+import AccessBanner from '@/components/properties/AccessBanner';
 
 /* -- Memoized presentational components ------------------------------- */
 
@@ -132,17 +135,17 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   const canViewMaintenance = useCan('maintenance_jobs.view');
   const canViewReports = useCan('reports.view');
 
-  const permissionMap = {
+  const permissionMap = useMemo(() => ({
     floors: canViewFloors,
     contracts: canViewContracts,
     customers: canViewCustomers,
     maintenance: canViewMaintenance,
     reports: canViewReports,
-  };
+  }), [canViewFloors, canViewContracts, canViewCustomers, canViewMaintenance, canViewReports]);
 
   const visibleTabs = useMemo(() =>
     PROPERTY_TABS.filter((t) => !t.permission || permissionMap[t.id]),
-    [canViewFloors, canViewContracts, canViewCustomers, canViewMaintenance, canViewReports]
+    [permissionMap]
   );
 
   /* Ensure active tab is visible; fallback if permission revoked */
@@ -163,6 +166,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   /* Fallback client-side fetch — only runs if SSR did not provide property data */
   useEffect(() => {
     if (property || error) return;
+    if (!uuid) { setLoading(false); return; }
     setLoading(true);
     PropertyService.show(uuid)
       .then((data) => {
@@ -184,9 +188,36 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
     setTab(tabId);
   }, []);
 
-  const handleTabChange = (tabId) => {
-    activateTab(tabId);
-  };
+  /* Property access state (subscription / workspace blocking)
+   * Flat property-level fields take precedence over workspace-level nested access.
+   */
+  const propertyAccess = useMemo(() => ({
+    ...property?.access,
+    subscription_status: property?.subscription_status,
+    subscription_message: property?.subscription_message,
+    subscription_reason_code: property?.subscription_reason_code,
+    payment_required_now: property?.payment_required_now,
+    operations_allowed: property?.operations_allowed,
+    operations_message: property?.operations_message,
+    operations_reason_code: property?.operations_reason_code,
+    subscription_current_period_ends_on: property?.subscription_current_period_ends_on,
+    subscription_expired_on: property?.subscription_expired_on,
+  }), [
+    property?.access,
+    property?.subscription_status,
+    property?.subscription_message,
+    property?.subscription_reason_code,
+    property?.payment_required_now,
+    property?.operations_allowed,
+    property?.operations_message,
+    property?.operations_reason_code,
+    property?.subscription_current_period_ends_on,
+    property?.subscription_expired_on,
+  ]);
+
+  const handleViewSubscription = useCallback(() => {
+    activateTab('subscription');
+  }, [activateTab]);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -239,111 +270,114 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
   }
 
   return (
-    <div className="space-y-5">
-      {/* Breadcrumb + back */}
-      <div className="flex items-center justify-between">
-        <nav className="flex items-center gap-2 text-sm text-gray-500">
-          <Link href="/properties" className="hover:text-gray-800 transition-colors">Properties</Link>
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <span className="text-gray-900 font-medium truncate max-w-xs">{property?.name}</span>
-        </nav>
-        <Link href="/properties" className="btn-secondary text-sm flex items-center gap-1.5">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </Link>
-      </div>
-
-      {/* -- Pill-style Tab Bar (horizontal scroll on mobile) ----------------- */}
-      <div className="relative">
-        <div
-          className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {visibleTabs.map((t) => {
-            const isActive = tab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => handleTabChange(t.id)}
-                className={`shrink-0 px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${isActive
-                  ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
-                  }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
+    <PropertyAccessProvider access={propertyAccess}>
+      <div className="space-y-5">
+        {/* Breadcrumb + back */}
+        <div className="flex items-center justify-between">
+          <nav className="flex items-center gap-2 text-sm text-gray-500">
+            <Link href="/properties" className="hover:text-gray-800 transition-colors">Properties</Link>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            <span className="text-gray-900 font-medium truncate max-w-xs">{property?.name}</span>
+          </nav>
+          <Link href="/properties" className="btn-secondary text-sm flex items-center gap-1.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </Link>
         </div>
-        {/* Fading edge hint for scrollability */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent hidden sm:hidden" />
-      </div>
 
-      {/* -- Overview Tab --------------------------------------------------- */}
-      {tab === 'overview' && (
-        <div className="space-y-5">
-          {/* Stat cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              }
-              value={property?.floors_count || 0}
-              label="Total Floors"
-              bg="bg-blue-50"
-              iconColor="text-blue-600"
-            />
-            <StatCard
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              }
-              value={property?.units_count || 0}
-              label="Total Units"
-              subtitle={`${property?.contracts_count || 0} occupied · ${Math.max(0, (property?.units_count || 0) - (property?.contracts_count || 0))} vacant`}
-              bg="bg-emerald-50"
-              iconColor="text-emerald-600"
-            />
-            <StatCard
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              }
-              value={property?.contracts_count || 0}
-              label="Active Contracts"
-              bg="bg-amber-50"
-              iconColor="text-amber-600"
-            />
+        <AccessBanner onViewSubscription={handleViewSubscription} />
+
+        {/* -- Pill-style Tab Bar (horizontal scroll on mobile) ----------------- */}
+        <div className="relative">
+          <div
+            className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {visibleTabs.map((t) => {
+              const isActive = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => activateTab(t.id)}
+                  className={`shrink-0 px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${isActive
+                    ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                    }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
+          {/* Fading edge hint for scrollability */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent hidden sm:hidden" />
+        </div>
 
-          {/* Charts row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Overall Occupancy */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-6">Overall Occupancy</h3>
-              <div className="flex items-center justify-center">
-                <OccupancyPie occupied={property?.contracts_count || 0} total={property?.units_count || 0} />
+        {/* -- Overview Tab --------------------------------------------------- */}
+        {tab === 'overview' && (
+          <div className="space-y-5">
+            {/* Stat cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatCard
+                icon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                }
+                value={property?.floors_count || 0}
+                label="Total Floors"
+                bg="bg-blue-50"
+                iconColor="text-blue-600"
+              />
+              <StatCard
+                icon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                }
+                value={property?.units_count || 0}
+                label="Total Units"
+                subtitle={`${property?.contracts_count || 0} occupied · ${Math.max(0, (property?.units_count || 0) - (property?.contracts_count || 0))} vacant`}
+                bg="bg-emerald-50"
+                iconColor="text-emerald-600"
+              />
+              <StatCard
+                icon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                }
+                value={property?.contracts_count || 0}
+                label="Active Contracts"
+                bg="bg-amber-50"
+                iconColor="text-amber-600"
+              />
+            </div>
+
+            {/* Charts row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Overall Occupancy */}
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-6">Overall Occupancy</h3>
+                <div className="flex items-center justify-center">
+                  <OccupancyPie occupied={property?.contracts_count || 0} total={property?.units_count || 0} />
+                </div>
+              </div>
+
+              {/* Contract Status */}
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-6">Contract Status</h3>
+                <ContractStatusList activeContracts={property?.contracts_count || 0} />
               </div>
             </div>
-
-            {/* Contract Status */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-6">Contract Status</h3>
-              <ContractStatusList activeContracts={property?.contracts_count || 0} />
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/*
+        {/*
        * -- Mount-once tab panels ----------------------------------------------
        * Each tab component mounts the first time its tab is opened, then stays
        * mounted forever (CSS hidden). This preserves scroll position, search
@@ -351,50 +385,58 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
        * every tab switch, no matter how many records the tab has loaded.
        */}
 
-      {/* Floors tab */}
-      {mountedTabs.has('floors') && (
-        <div className={tab !== 'floors' ? 'hidden' : ''}>
-          <FloorsTab propertyUuid={uuid} />
-        </div>
-      )}
+        {/* Floors tab */}
+        {mountedTabs.has('floors') && (
+          <div className={tab !== 'floors' ? 'hidden' : ''}>
+            <FloorsTab propertyUuid={uuid} />
+          </div>
+        )}
 
-      {/* Contracts tab */}
-      {mountedTabs.has('contracts') && (
-        <div className={tab !== 'contracts' ? 'hidden' : ''}>
-          <ContractsTab propertyUuid={uuid} />
-        </div>
-      )}
+        {/* Contracts tab */}
+        {mountedTabs.has('contracts') && (
+          <div className={tab !== 'contracts' ? 'hidden' : ''}>
+            <ContractsTab propertyUuid={uuid} />
+          </div>
+        )}
 
-      {/* Customers tab */}
-      {mountedTabs.has('customers') && (
-        <div className={tab !== 'customers' ? 'hidden' : ''}>
-          <CustomersTab propertyUuid={uuid} />
-        </div>
-      )}
+        {/* Customers tab */}
+        {mountedTabs.has('customers') && (
+          <div className={tab !== 'customers' ? 'hidden' : ''}>
+            <CustomersTab propertyUuid={uuid} />
+          </div>
+        )}
 
-      {/* Maintenance tab */}
-      {mountedTabs.has('maintenance') && (
-        <div className={tab !== 'maintenance' ? 'hidden' : ''}>
-          <MaintenanceTab propertyUuid={uuid} />
-        </div>
-      )}
+        {/* Maintenance tab */}
+        {mountedTabs.has('maintenance') && (
+          <div className={tab !== 'maintenance' ? 'hidden' : ''}>
+            <MaintenanceTab propertyUuid={uuid} />
+          </div>
+        )}
 
-      {/* Reports tab */}
-      {mountedTabs.has('reports') && (
-        <div className={tab !== 'reports' ? 'hidden' : ''}>
-          <ReportsTab propertyUuid={uuid} />
-        </div>
-      )}
+        {/* Reports tab */}
+        {mountedTabs.has('reports') && (
+          <div className={tab !== 'reports' ? 'hidden' : ''}>
+            <ReportsTab propertyUuid={uuid} />
+          </div>
+        )}
 
-      <ConfirmModal
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDelete}
-        loading={deleting}
-        title="Delete Property"
-        message={`Delete "${property?.name}"? This cannot be undone.`}
-        confirmLabel="Delete Property"
-      />
-    </div>
+        {/* Subscription tab */}
+        {mountedTabs.has('subscription') && (
+          <div className={tab !== 'subscription' ? 'hidden' : ''}>
+            <SubscriptionTab propertyUuid={uuid} />
+          </div>
+        )}
+
+        <ConfirmModal
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={handleDelete}
+          loading={deleting}
+          title="Delete Property"
+          message={`Delete "${property?.name}"? This cannot be undone.`}
+          confirmLabel="Delete Property"
+        />
+      </div>
+    </PropertyAccessProvider>
   );
 }

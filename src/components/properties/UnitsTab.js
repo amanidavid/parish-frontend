@@ -217,6 +217,7 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
 
   /* Load floors for the filter dropdown — bounded to 100 rows, abortable */
   useEffect(() => {
+    if (!propertyUuid) { setFloors([]); setFloorsLoading(false); return; }
     floorsAbortRef.current?.abort();
     floorsAbortRef.current = new AbortController();
     const { signal } = floorsAbortRef.current;
@@ -235,6 +236,7 @@ export default function UnitsTab({ propertyUuid, initialFloor = null, onBackToFl
   }, [initialFloor]);
 
   const loadUnits = useCallback(async () => {
+    if (!propertyUuid) { setUnits([]); setMeta(null); setUnitsLoading(false); return; }
     /* Cancel previous in-flight request — prevents stale-data race conditions */
     unitsAbortRef.current?.abort();
     unitsAbortRef.current = new AbortController();
