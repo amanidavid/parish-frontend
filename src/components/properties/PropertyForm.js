@@ -74,6 +74,19 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
   const [districtsLoading, setDistrictsLoading] = useState(false);
   const [wardsLoading, setWardsLoading] = useState(false);
 
+  const isTanzania = selectedCountry?.name?.toLowerCase().includes('tanzania') || false;
+
+  /* Auto-select Tanzania as default country for new properties */
+  useEffect(() => {
+    if (initCountryUuid) return;
+    LocationService.countries('Tanzania')
+      .then((d) => {
+        const tz = d?.data?.find((c) => c.name?.toLowerCase().includes('tanzania'));
+        if (tz) selectCountry(tz);
+      })
+      .catch(() => { });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* Load property types */
   useEffect(() => {
     apiFetch('/api/v1/app/property-types?per_page=100')
@@ -164,7 +177,7 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
 
   const selectCountry = useCallback((country) => {
     if (!country) {
-      setForm((prev) => ({ ...prev, country_uuid: '', region_uuid: '', district_uuid: '', ward_uuid: '' }));
+      setForm((prev) => ({ ...prev, country_uuid: '', region_uuid: '', district_uuid: '', ward_uuid: '', address_line: '' }));
       setSelectedCountry(null);
       setCountrySearch('');
       setRegions([]);
@@ -172,19 +185,30 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
       setWards([]);
       return;
     }
-    setForm((prev) => ({ ...prev, country_uuid: country.uuid, region_uuid: '', district_uuid: '', ward_uuid: '' }));
+    const tz = country.name?.toLowerCase().includes('tanzania') || false;
+    setForm((prev) => ({
+      ...prev,
+      country_uuid: country.uuid,
+      region_uuid: tz ? '' : prev.region_uuid,
+      district_uuid: tz ? '' : prev.district_uuid,
+      ward_uuid: tz ? '' : prev.ward_uuid,
+      address_line: tz ? '' : prev.address_line,
+    }));
     setSelectedCountry(country);
     setCountrySearch(country.name);
     setCountryDropdownOpen(false);
-    setRegions([]);
-    setDistricts([]);
-    setWards([]);
-    setFieldErrors((prev) => ({ ...prev, country_uuid: null, region_uuid: null, district_uuid: null, ward_uuid: null }));
-    setRegionsLoading(true);
-    LocationService.regions(country.uuid)
-      .then((d) => setRegions(d?.data || []))
-      .catch(() => { })
-      .finally(() => setRegionsLoading(false));
+    setFieldErrors((prev) => ({ ...prev, country_uuid: null, region_uuid: null, district_uuid: null, ward_uuid: null, address_line: null }));
+    if (tz) {
+      setRegionsLoading(true);
+      LocationService.regions(country.uuid)
+        .then((d) => setRegions(d?.data || []))
+        .catch(() => { })
+        .finally(() => setRegionsLoading(false));
+    } else {
+      setRegions([]);
+      setDistricts([]);
+      setWards([]);
+    }
   }, []);
 
   const handleSubmit = async (e) => {
@@ -202,10 +226,19 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
       type_uuid: form.type_uuid || null,
       status: 'active',
       country_uuid: form.country_uuid || null,
-      region_uuid: form.region_uuid || null,
-      district_uuid: form.district_uuid || null,
-      ward_uuid: form.ward_uuid || null,
-      address_line: form.address_line || null,
+      ...(isTanzania
+        ? {
+          region_uuid: form.region_uuid || null,
+          district_uuid: form.district_uuid || null,
+          ward_uuid: form.ward_uuid || null,
+          address_line: null,
+        }
+        : {
+          region_uuid: null,
+          district_uuid: null,
+          ward_uuid: null,
+          address_line: form.address_line || null,
+        }),
     };
     console.log('[PropertyForm] submit payload:', payload);
     const result = await onSubmit(payload);
@@ -295,71 +328,71 @@ export default function PropertyForm({ initial = {}, onSubmit, loading, submitLa
             </div>
           </Field>
 
-          <Field label="Region" error={fieldErrors?.region_uuid?.[0]}>
-            <select
-              name="region_uuid"
-              className="input"
-              value={form.region_uuid}
-              onChange={handleRegionChange}
-              disabled={!form.country_uuid || regionsLoading}
-            >
-              <option value="">{!form.country_uuid ? 'Select country first' : regionsLoading ? 'Loading...' : 'Select region (optional)'}</option>
-              {regions.map((r) => (
-                <option key={r.uuid} value={r.uuid}>{capitalize(r.name)}</option>
-              ))}
-            </select>
-          </Field>
+          {isTanzania && (
+            <>
+              <Field label="Region" error={fieldErrors?.region_uuid?.[0]}>
+                <select
+                  name="region_uuid"
+                  className="input"
+                  value={form.region_uuid}
+                  onChange={handleRegionChange}
+                  disabled={!form.country_uuid || regionsLoading}
+                >
+                  <option value="">{!form.country_uuid ? 'Select country first' : regionsLoading ? 'Loading...' : 'Select region (optional)'}</option>
+                  {regions.map((r) => (
+                    <option key={r.uuid} value={r.uuid}>{capitalize(r.name)}</option>
+                  ))}
+                </select>
+              </Field>
 
-          <Field
-            label="District"
-            error={fieldErrors?.district_uuid?.[0]}
-          >
-            <select
-              name="district_uuid"
-              className="input"
-              value={form.district_uuid}
-              onChange={handleDistrictChange}
-              disabled={!form.region_uuid || districtsLoading}
-            >
-              <option value="">
-                {!form.region_uuid ? 'Select region first' : districtsLoading ? 'Loading...' : 'Select district (optional)'}
-              </option>
-              {districts.map((d) => (
-                <option key={d.uuid} value={d.uuid}>{capitalize(d.name)}</option>
-              ))}
-            </select>
-          </Field>
+              <Field label="District" error={fieldErrors?.district_uuid?.[0]}>
+                <select
+                  name="district_uuid"
+                  className="input"
+                  value={form.district_uuid}
+                  onChange={handleDistrictChange}
+                  disabled={!form.region_uuid || districtsLoading}
+                >
+                  <option value="">
+                    {!form.region_uuid ? 'Select region first' : districtsLoading ? 'Loading...' : 'Select district (optional)'}
+                  </option>
+                  {districts.map((d) => (
+                    <option key={d.uuid} value={d.uuid}>{capitalize(d.name)}</option>
+                  ))}
+                </select>
+              </Field>
 
-          <Field
-            label="Ward"
-            error={fieldErrors?.ward_uuid?.[0]}
-          >
-            <select
-              name="ward_uuid"
-              className="input"
-              value={form.ward_uuid}
-              onChange={handleChange}
-              disabled={!form.district_uuid || wardsLoading}
-            >
-              <option value="">
-                {!form.district_uuid ? 'Select district first' : wardsLoading ? 'Loading...' : 'Select ward (optional)'}
-              </option>
-              {wards.map((w) => (
-                <option key={w.uuid} value={w.uuid}>{capitalize(w.name)}</option>
-              ))}
-            </select>
-          </Field>
+              <Field label="Ward" error={fieldErrors?.ward_uuid?.[0]}>
+                <select
+                  name="ward_uuid"
+                  className="input"
+                  value={form.ward_uuid}
+                  onChange={handleChange}
+                  disabled={!form.district_uuid || wardsLoading}
+                >
+                  <option value="">
+                    {!form.district_uuid ? 'Select district first' : wardsLoading ? 'Loading...' : 'Select ward (optional)'}
+                  </option>
+                  {wards.map((w) => (
+                    <option key={w.uuid} value={w.uuid}>{capitalize(w.name)}</option>
+                  ))}
+                </select>
+              </Field>
+            </>
+          )}
 
-          <Field label="Address / Location" error={fieldErrors?.address_line?.[0]}>
-            <input
-              name="address_line"
-              type="text"
-              className="input"
-              placeholder="e.g. 123 Main Street, Nairobi"
-              value={form.address_line}
-              onChange={handleChange}
-            />
-          </Field>
+          {!isTanzania && (
+            <Field label="Address / Location" error={fieldErrors?.address_line?.[0]}>
+              <input
+                name="address_line"
+                type="text"
+                className="input"
+                placeholder="e.g. 123 Main Street, Nairobi"
+                value={form.address_line}
+                onChange={handleChange}
+              />
+            </Field>
+          )}
         </div>
       </div>
 

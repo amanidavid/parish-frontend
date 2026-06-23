@@ -37,6 +37,13 @@ const ContractService = {
   async destroy(uuid) {
     return apiFetch(`${BASE}/${uuid}`, { method: 'DELETE' });
   },
+
+  async nextNumber({ unitUuid, startDate }) {
+    const query = new URLSearchParams();
+    if (unitUuid) query.set('unit_uuid', unitUuid);
+    if (startDate) query.set('start_date', startDate);
+    return apiFetch(`${BASE}/next-number?${query}`);
+  },
 };
 
 export default ContractService;

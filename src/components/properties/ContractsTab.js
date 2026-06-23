@@ -11,6 +11,7 @@ import useConfirmModal from '@/hooks/useConfirmModal';
 import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
 import { usePropertyAccess } from '@/contexts/PropertyAccessContext';
+import { capitalize } from '@/lib/utils';
 
 const BTN = {
   gray: 'h-8 px-3 inline-flex items-center gap-1.5 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors',
@@ -48,6 +49,112 @@ function FieldError({ message }) {
   return <p className="mt-1 text-xs text-red-600">{message}</p>;
 }
 
+/* ─── Module-level helpers (shared by all components) ──────────── */
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtAmount = (amount, currency) =>
+  amount != null ? `${currency || ''} ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+
+function getNextContractNumber(contracts = []) {
+  if (!contracts.length) return 'C-001';
+  const nums = contracts
+    .map((c) => c.contract_number)
+    .filter(Boolean)
+    .map((n) => {
+      const m = n.match(/(\d+)(?!.*\d)/); // last number sequence
+      return m ? parseInt(m[1], 10) : 0;
+    });
+  const max = nums.length ? Math.max(...nums) : 0;
+  const next = max + 1;
+  // Preserve padding of the longest number
+  const padLen = String(max).length;
+  return `C-${String(next).padStart(Math.max(padLen, 3), '0')}`;
+}
+
+/* ─── Premium Read-Only Contract View Modal ─────────────────────── */
+function ContractViewModal({ open, onClose, contract }) {
+  const c = contract || {};
+  const s = CONTRACT_STATUS[c.status] || CONTRACT_STATUS.draft;
+
+  const InfoRow = ({ icon, label, value, sub }) => (
+    <div className="flex items-start gap-3 py-3">
+      <div className="shrink-0 w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</p>
+        <p className="text-sm font-semibold text-gray-900 mt-0.5 truncate">{value || '—'}</p>
+        {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  );
+
+  if (!open || !contract) return null;
+  return (
+    <Modal open={open} onClose={onClose} title="Contract Details" maxWidth="max-w-lg">
+      <div className="space-y-5">
+        {/* Header Card */}
+        <div className={`relative overflow-hidden rounded-xl ring-1 shadow-sm p-5 ${s.bg} ring-gray-100`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <ContractStatusBadge status={c.status} />
+                {c.duration_label && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/60 text-gray-700 text-[10px] font-semibold">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    {c.duration_label}
+                  </span>
+                )}
+              </div>
+              <p className="text-lg font-bold text-gray-900 mt-2">{c.contract_number || '—'}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums">{fmtAmount(c.amount, c.currency)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Details Grid */}
+        <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+          <InfoRow
+            icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+            label="Customer"
+            value={c.customer?.display_name}
+            sub={c.customer?.customer_type ? capitalize(c.customer.customer_type) : undefined}
+          />
+          <InfoRow
+            icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
+            label="Unit"
+            value={c.unit ? `${c.unit.unit_number}${c.unit.property_floor ? ` · ${c.unit.property_floor.name}` : ''}` : undefined}
+          />
+          <InfoRow
+            icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+            label="Period"
+            value={`${fmtDate(c.start_date)} — ${c.end_date ? fmtDate(c.end_date) : 'Open ended'}`}
+          />
+        </div>
+
+        {/* Notes */}
+        {c.notes && (
+          <div className="bg-amber-50/40 rounded-xl border border-amber-100/60 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Notes</p>
+            </div>
+            <p className="text-sm text-amber-900/80 leading-relaxed whitespace-pre-line">{c.notes}</p>
+          </div>
+        )}
+
+        {/* Close */}
+        <div className="flex justify-end pt-2">
+          <button onClick={onClose} className="btn-secondary text-sm">
+            Close
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
   const isEdit = !!initial?.uuid;
   const emptyForm = {
@@ -66,6 +173,7 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState(null);
+  const [nextNumLoading, setNextNumLoading] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -201,12 +309,27 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
   };
 
   const clearUnit = () => {
-    setForm((p) => ({ ...p, unit_uuid: '' }));
+    setForm((p) => ({ ...p, unit_uuid: '', contract_number: '' }));
     setSelectedUnitName('');
     setUnitSearch('');
     setUnits([]);
     setUnitDropdownOpen(false);
   };
+
+  /* Auto-fetch next contract number when unit or start_date changes (new mode only) */
+  useEffect(() => {
+    if (isEdit) return;
+    if (!form.unit_uuid) return;
+    setNextNumLoading(true);
+    ContractService.nextNumber({ unitUuid: form.unit_uuid, startDate: form.start_date || undefined })
+      .then((data) => {
+        if (data?.success) {
+          setForm((p) => ({ ...p, contract_number: data.data.next_number || '' }));
+        }
+      })
+      .catch(() => { })
+      .finally(() => setNextNumLoading(false));
+  }, [form.unit_uuid, form.start_date, isEdit]);
 
   useEffect(() => {
     if (!customerDropdownOpen) return;
@@ -414,32 +537,37 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
             <FieldError message={errors?.unit_uuid?.[0]} />
           </div>
 
-          {isEdit && (
-            <>
-              {/* Contract number - editable on edit */}
-              <div>
-                <label className="label">Contract Number</label>
-                <input
-                  name="contract_number"
-                  type="text"
-                  className="input text-sm"
-                  value={form.contract_number}
-                  onChange={change}
-                />
-                <FieldError message={errors?.contract_number?.[0]} />
-              </div>
+          {/* Contract number - full width, auto-filled from API when unit selected */}
+          <div className="sm:col-span-2">
+            <label className="label">Contract Number</label>
+            <div className="relative">
+              <input
+                name="contract_number"
+                type="text"
+                className="input text-sm w-full pr-9"
+                value={form.contract_number}
+                onChange={change}
+                placeholder={!isEdit ? 'Select a unit to auto-generate' : ''}
+              />
+              {nextNumLoading && (
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300">
+                  <Spinner />
+                </span>
+              )}
+            </div>
+            <FieldError message={errors?.contract_number?.[0]} />
+          </div>
 
-              {/* Status */}
-              <div>
-                <label className="label">Status</label>
-                <select name="status" className="input text-sm" value={form.status} onChange={change}>
-                  {Object.entries(CONTRACT_STATUS).map(([val, { label }]) => (
-                    <option key={val} value={val}>{label}</option>
-                  ))}
-                </select>
-                <FieldError message={errors?.status?.[0]} />
-              </div>
-            </>
+          {isEdit && (
+            <div>
+              <label className="label">Status</label>
+              <select name="status" className="input text-sm" value={form.status} onChange={change}>
+                {Object.entries(CONTRACT_STATUS).map(([val, { label }]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+              <FieldError message={errors?.status?.[0]} />
+            </div>
           )}
 
           {/* Start date */}
@@ -538,6 +666,7 @@ export default function ContractsTab({ propertyUuid }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [contractModal, setContractModal] = useState(null);
+  const [viewContract, setViewContract] = useState(null);
   const confirmModal = useConfirmModal();
   const searchRef = useRef(null);
 
@@ -607,10 +736,6 @@ export default function ContractsTab({ propertyUuid }) {
       loadContracts();
     }
   }, [confirmModal, loadContracts]);
-
-  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const fmtAmount = (amount, currency) =>
-    amount != null ? `${currency || ''} ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
 
   /* Contract summary counts */
   const contractSummary = useMemo(() => {
@@ -826,10 +951,8 @@ export default function ContractsTab({ propertyUuid }) {
                       <div className="flex items-center justify-end gap-2">
                         {canView && (
                           <button
-                            onClick={() => setContractModal(c)}
-                            disabled={opsBlocked}
-                            title={opsBlocked ? opsMessage : undefined}
-                            className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => setViewContract(c)}
+                            className="text-xs font-medium px-2.5 py-1 rounded-md bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors"
                           >
                             View
                           </button>
@@ -850,6 +973,12 @@ export default function ContractsTab({ propertyUuid }) {
           </>
         )}
       </div>
+
+      <ContractViewModal
+        open={!!viewContract}
+        onClose={() => setViewContract(null)}
+        contract={viewContract}
+      />
 
       <ContractModal
         open={!!contractModal}
