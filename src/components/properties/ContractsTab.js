@@ -155,7 +155,7 @@ function ContractViewModal({ open, onClose, contract }) {
   );
 }
 
-function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
+function ContractModal({ open, onClose, onSaved, propertyUuid, initial, contracts = [] }) {
   const isEdit = !!initial?.uuid;
   const emptyForm = {
     customer_uuid: '',
@@ -325,11 +325,17 @@ function ContractModal({ open, onClose, onSaved, propertyUuid, initial }) {
       .then((data) => {
         if (data?.success) {
           setForm((p) => ({ ...p, contract_number: data.data.next_number || '' }));
+        } else {
+          // Backend endpoint not ready — fallback to frontend generator
+          setForm((p) => ({ ...p, contract_number: getNextContractNumber(contracts) }));
         }
       })
-      .catch(() => { })
+      .catch(() => {
+        // API unreachable / 404 — fallback to frontend generator
+        setForm((p) => ({ ...p, contract_number: getNextContractNumber(contracts) }));
+      })
       .finally(() => setNextNumLoading(false));
-  }, [form.unit_uuid, form.start_date, isEdit]);
+  }, [form.unit_uuid, form.start_date, isEdit, contracts]);
 
   useEffect(() => {
     if (!customerDropdownOpen) return;
@@ -986,6 +992,7 @@ export default function ContractsTab({ propertyUuid }) {
         onSaved={handleSaved}
         propertyUuid={propertyUuid}
         initial={contractModal === 'new' ? null : contractModal}
+        contracts={contracts}
       />
 
       <ConfirmModal

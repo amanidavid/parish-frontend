@@ -3,13 +3,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import FloorService from '@/services/FloorService';
 import UnitService from '@/services/UnitService';
-import CustomerService from '@/services/CustomerService';
 import ContractService from '@/services/ContractService';
+import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { usePropertyAccess } from '@/contexts/PropertyAccessContext';
+import { capitalize } from '@/lib/utils';
 
 const PER_PAGE = 50;
 
@@ -19,14 +19,24 @@ function ModalPortal({ children }) {
   return createPortal(children, document.body);
 }
 
-/* -- Helpers ------------------------------------------------------- */
-function capitalize(value) {
-  if (!value || typeof value !== 'string') return value || '';
-  return value
-    .trim()
-    .split(/\s+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
+/* ─── Helpers for contract view modal ───────────────────────────── */
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtAmount = (amount, currency) =>
+  amount != null ? `${currency || ''} ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+
+const CONTRACT_STATUS = {
+  draft: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600', color: '#6b7280' },
+  active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700', color: '#22c55e' },
+  expired: { label: 'Expired', bg: 'bg-orange-50', text: 'text-orange-700', color: '#f97316' },
+};
+
+function ContractStatusBadge({ status }) {
+  const s = CONTRACT_STATUS[status] || CONTRACT_STATUS.draft;
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${s.bg} ${s.text}`}>
+      {s.label}
+    </span>
+  );
 }
 
 function Spinner({ className = 'w-4 h-4' }) {
@@ -240,167 +250,118 @@ function UnitModal({ open, onClose, onSaved, floorUuid, initial }) {
   );
 }
 
-/* -- Contract modal (create for a unit) ---------------------------- */
-function ContractModal({ open, onClose, onSaved, propertyUuid, unit }) {
-  const [form, setForm] = useState({
-    customer_uuid: '', start_date: '', end_date: '', amount: '', currency: 'TZS', notes: '',
-  });
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [serverError, setServerError] = useState(null);
-  const [customers, setCustomers] = useState([]);
-  const [customersLoading, setCustomersLoading] = useState(false);
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
-  const [selectedCustomerName, setSelectedCustomerName] = useState('');
-  const customerSearchTimer = useRef(null);
-  const customerInputRef = useRef(null);
-  const customerDropdownRef = useRef(null);
+/* -- Contract view modal (read-only for a unit) -------------------- */
+function ContractViewModal({ open, onClose, unit }) {
+  const [contract, setContract] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setForm({ customer_uuid: '', start_date: '', end_date: '', amount: '', currency: 'TZS', notes: '' });
-      setSelectedCustomerName('');
-      setCustomerSearch('');
-      setCustomers([]);
-      setCustomerDropdownOpen(false);
-      setErrors({});
-      setServerError(null);
-    }
-  }, [open]);
+    if (!open || !unit?.uuid) return;
+    setLoading(true);
+    ContractService.list({ unitUuid: unit.uuid, perPage: 1 })
+      .then((data) => {
+        if (data?.success && data.data?.length) {
+          setContract(data.data[0]);
+        } else {
+          setContract(null);
+        }
+      })
+      .catch(() => setContract(null))
+      .finally(() => setLoading(false));
+  }, [open, unit?.uuid]);
 
-  const fetchCustomers = useCallback((query) => {
-    setCustomersLoading(true);
-    CustomerService.list({ search: query || undefined, perPage: 20, propertyUuid })
-      .then((data) => { if (data?.success) setCustomers(data.data || []); })
-      .catch(() => { })
-      .finally(() => setCustomersLoading(false));
-  }, [propertyUuid]);
+  const InfoRow = ({ icon, label, value, sub }) => (
+    <div className="flex items-start gap-3 py-3">
+      <div className="shrink-0 w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</p>
+        <p className="text-sm font-semibold text-gray-900 mt-0.5 truncate">{value || '—'}</p>
+        {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  );
 
-  useEffect(() => {
-    if (!open) return;
-    clearTimeout(customerSearchTimer.current);
-    customerSearchTimer.current = setTimeout(() => fetchCustomers(customerSearch), 300);
-    return () => clearTimeout(customerSearchTimer.current);
-  }, [customerSearch, open, fetchCustomers]);
+  const c = contract || {};
+  const s = CONTRACT_STATUS[c.status] || CONTRACT_STATUS.draft;
 
-  useEffect(() => {
-    function handleClick(e) {
-      if (customerDropdownRef.current && !customerDropdownRef.current.contains(e.target) && customerInputRef.current && !customerInputRef.current.contains(e.target)) {
-        setCustomerDropdownOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrors({});
-    setServerError(null);
-    setSaving(true);
-    try {
-      const payload = {
-        customer_uuid: form.customer_uuid,
-        unit_uuid: unit?.uuid,
-        property_uuid: propertyUuid,
-        start_date: form.start_date || null,
-        end_date: form.end_date,
-        amount: form.amount ? Number(form.amount) : null,
-        currency: form.currency,
-        status: 'draft',
-        notes: form.notes.trim() || null,
-      };
-      const data = await ContractService.store(payload);
-      if (data?.success) {
-        onSaved(data.data, data?.message);
-        onClose();
-      } else {
-        if (data?.errors) setErrors(data.errors);
-        else setServerError(data?.message || 'Request failed.');
-      }
-    } catch {
-      setServerError('Network error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (!open) return null;
   return (
-    <ModalPortal>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-        <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-lg font-bold text-gray-900">New Contract — {unit?.unit_number || 'Unit'}</h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+    <Modal open={open} onClose={onClose} title={`Contract — ${unit?.unit_number || 'Unit'}`} maxWidth="max-w-lg">
+      <div className="space-y-5">
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-gray-400">
+            <svg className="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Loading contract...
           </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {serverError && (
-              <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2.5">
-                <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <p className="text-sm text-red-700">{serverError}</p>
+        ) : !contract ? (
+          <div className="text-center py-12">
+            <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-sm text-gray-500">No contract found for this unit.</p>
+          </div>
+        ) : (
+          <>
+            {/* Header Card — contract number + amount priority */}
+            <div className={`relative overflow-hidden rounded-xl ring-1 shadow-sm p-5 ${s.bg} ring-gray-100`}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ContractStatusBadge status={c.status} />
+                  </div>
+                  <p className="text-lg font-bold text-gray-900 mt-2">{c.contract_number || '—'}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900 tabular-nums">{fmtAmount(c.amount, c.currency)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Details Grid */}
+            <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+              <InfoRow
+                icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+                label="Customer"
+                value={c.customer?.display_name}
+                sub={c.customer?.customer_type ? capitalize(c.customer.customer_type) : undefined}
+              />
+              <InfoRow
+                icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                label="Period"
+                value={`${fmtDate(c.start_date)} — ${c.end_date ? fmtDate(c.end_date) : 'Open ended'}`}
+              />
+              <InfoRow
+                icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
+                label="Unit"
+                value={c.unit ? `${c.unit.unit_number}${c.unit.property_floor ? ` · ${c.unit.property_floor.name}` : ''}` : undefined}
+              />
+            </div>
+
+            {/* Notes */}
+            {c.notes && (
+              <div className="bg-amber-50/40 rounded-xl border border-amber-100/60 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Notes</p>
+                </div>
+                <p className="text-sm text-amber-900/80 leading-relaxed whitespace-pre-line">{c.notes}</p>
               </div>
             )}
 
-            {/* Customer search */}
-            <div className="relative">
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Customer <span className="text-red-500">*</span></label>
-              <input ref={customerInputRef} type="text" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" placeholder="Search customer..." value={selectedCustomerName || customerSearch} onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomerName(''); setCustomerDropdownOpen(true); }} onFocus={() => setCustomerDropdownOpen(true)} />
-              {customerDropdownOpen && (
-                <div ref={customerDropdownRef} className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {customersLoading ? <div className="p-3 text-sm text-gray-400 text-center">Loading...</div> : customers.length === 0 ? <div className="p-3 text-sm text-gray-400 text-center">No customers found</div> : customers.map((c) => (
-                    <button key={c.uuid} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" onClick={() => { setForm((p) => ({ ...p, customer_uuid: c.uuid })); setSelectedCustomerName(c.display_name); setCustomerDropdownOpen(false); }}>
-                      {c.display_name}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {errors.customer_uuid?.[0] && <p className="mt-1 text-xs text-red-600">{errors.customer_uuid[0]}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Start Date</label>
-                <input type="date" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" value={form.start_date} onChange={(e) => setForm((p) => ({ ...p, start_date: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">End Date <span className="text-red-500">*</span></label>
-                <input type="date" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" value={form.end_date} onChange={(e) => setForm((p) => ({ ...p, end_date: e.target.value }))} required />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Amount</label>
-                <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" placeholder="0.00" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Currency</label>
-                <select className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none" value={form.currency} onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value }))}>
-                  <option value="TZS">TZS</option>
-                  <option value="USD">USD</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Notes <span className="text-gray-400 font-normal">(optional)</span></label>
-              <textarea className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none resize-none" rows={2} placeholder="Additional notes..." value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-              <button type="button" onClick={onClose} disabled={saving} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Cancel</button>
-              <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 inline-flex items-center gap-2">
-                {saving && <Spinner />}
-                Create Contract
+            {/* Close */}
+            <div className="flex justify-end pt-2">
+              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">
+                Close
               </button>
             </div>
-          </form>
-        </div>
+          </>
+        )}
       </div>
-    </ModalPortal>
+    </Modal>
   );
 }
 
@@ -857,14 +818,9 @@ export default function FloorsWorkspace({ propertyUuid }) {
         initial={unitModal === 'new' ? null : unitModal}
       />
 
-      <ContractModal
+      <ContractViewModal
         open={!!contractModal}
         onClose={() => setContractModal(null)}
-        onSaved={(data, message) => {
-          useUiStore.getState().showModal({ type: 'success', message: message || 'Contract created successfully.' });
-          loadUnits(selected?.uuid);
-        }}
-        propertyUuid={propertyUuid}
         unit={contractModal}
       />
     </div >
