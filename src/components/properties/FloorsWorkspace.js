@@ -6,6 +6,7 @@ import UnitService from '@/services/UnitService';
 import ContractService from '@/services/ContractService';
 import Modal from '@/components/ui/Modal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { usePropertyAccess } from '@/contexts/PropertyAccessContext';
