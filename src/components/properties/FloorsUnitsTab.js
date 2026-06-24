@@ -4,6 +4,7 @@ import Link from 'next/link';
 import FloorService from '@/services/FloorService';
 import UnitService from '@/services/UnitService';
 import Modal from '@/components/ui/Modal';
+import UnitModal from '@/components/units/UnitModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useConfirmModal from '@/hooks/useConfirmModal';
 import ActionMenu from '@/components/ui/ActionMenu';
@@ -126,114 +127,6 @@ function FloorModal({ open, onClose, onSave, propertyUuid, initial }) {
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading && <Spinner small />}
             {isEdit ? 'Save Changes' : 'Add Floor'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function UnitModal({ open, onClose, onSave, floorUuid, initial }) {
-  const isEdit = !!initial;
-  const [form, setForm] = useState({ unit_number: '', description: '', status: 'vacant' });
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState(null);
-
-  useEffect(() => {
-    if (open) {
-      setForm({ unit_number: initial?.unit_number || '', description: initial?.description || '', status: initial?.status || 'vacant' });
-      setErrors({});
-      setServerError(null);
-    }
-  }, [open, initial]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrors({});
-    setServerError(null);
-    setLoading(true);
-    try {
-      const payload = {
-        unit_number: form.unit_number.trim(),
-        description: form.description || null,
-        status: form.status,
-        ...(!isEdit && { property_floor_uuid: floorUuid }),
-      };
-      const data = isEdit
-        ? await UnitService.update(initial.uuid, payload)
-        : await UnitService.store(payload);
-
-      if (data?.success) {
-        onSave(data.data, isEdit, data?.message);
-        onClose();
-      } else {
-        if (data?.errors) setErrors(data.errors);
-        setServerError(data?.message || 'Request failed. Please check your input and try again.');
-      }
-    } catch {
-      setServerError('Network error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Edit Unit' : 'Add Unit'} maxWidth="max-w-md">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {serverError && (
-          <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2.5">
-            <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-red-700">{serverError}</p>
-          </div>
-        )}
-
-        <div>
-          <label className="label">Unit Number <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            className="input"
-            placeholder="e.g. G-01"
-            value={form.unit_number}
-            onChange={(e) => setForm((p) => ({ ...p, unit_number: e.target.value }))}
-            required
-          />
-          <FieldError error={errors.unit_number?.[0]} />
-        </div>
-
-        <div>
-          <label className="label">Status</label>
-          <select
-            className="input"
-            value={form.status}
-            onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
-          >
-            <option value="vacant">Vacant</option>
-            <option value="occupied">Occupied</option>
-            <option value="maintenance">Maintenance</option>
-          </select>
-          <FieldError error={errors.status?.[0]} />
-        </div>
-
-        <div>
-          <label className="label">Description <span className="text-gray-400 font-normal text-xs">(optional)</span></label>
-          <textarea
-            className="input resize-none"
-            rows={2}
-            placeholder="Brief description of this unit..."
-            value={form.description}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-          />
-          <FieldError error={errors.description?.[0]} />
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" className="btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading && <Spinner small />}
-            {isEdit ? 'Save Changes' : 'Add Unit'}
           </button>
         </div>
       </form>
