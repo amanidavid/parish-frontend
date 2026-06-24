@@ -235,19 +235,35 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
         )}
 
         {summaryLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-                <SkeletonBlock w="w-24" h="h-3" />
-                <SkeletonBlock w="w-40" h="h-5" />
-                <SkeletonBlock w="w-32" h="h-3" />
-                <SkeletonBlock w="w-36" h="h-3" />
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <SkeletonBlock w="w-10" h="h-10" />
+              <div className="space-y-2 flex-1">
+                <SkeletonBlock w="w-32" h="h-4" />
+                <SkeletonBlock w="w-48" h="h-3" />
               </div>
-            ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <SkeletonBlock w="w-8" h="h-8" />
+                  <div className="space-y-1.5 flex-1">
+                    <SkeletonBlock w="w-16" h="h-3" />
+                    <SkeletonBlock w="w-28" h="h-4" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : summary && (
           <>
-            {/* Access Status Banner */}
+            {/*
+            ============================================================
+            BILLING SUMMARY — commented out for future use
+            ============================================================
+            { Access Status Banner, Plan, Billing Profile, Usage & Cost }
+            Uncomment below when workspace-level billing summary is needed.
+            -----------------------------------------------------------
             <div className={`rounded-lg border px-5 py-4 flex flex-wrap items-start gap-4 justify-between ${summary.access_state === 'trialing' ? 'bg-blue-50 border-blue-200' :
               summary.access_state === 'active' ? 'bg-green-50 border-green-200' :
                 summary.access_state === 'grace' ? 'bg-orange-50 border-orange-200' :
@@ -266,61 +282,93 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
               </div>
             </div>
 
-            {/* Detail Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              {/* Plan */}
-              <SectionCard title="Plan">
-                <DetailRow label="Name" value={<span className="capitalize font-bold text-blue-700">{plan?.name || '—'}</span>} />
-                <DetailRow label="Billing Interval" value={<span className="capitalize">{plan?.billing_interval || '—'}</span>} />
-                <DetailRow label="Trial Days" value={plan?.trial_days ?? '—'} />
-                <DetailRow label="Properties Included" value={plan?.properties_included ?? '—'} />
-                <DetailRow label="Units Limit" value={plan?.features?.units_limit ?? 'Unlimited'} />
-                <DetailRow label="Base Price" value={formatCurrency(plan?.price_cents, currency)} />
-                <DetailRow label="Price / Property" value={formatCurrency(plan?.price_per_property_cents, currency)} />
-              </SectionCard>
+              <SectionCard title="Plan"> ... </SectionCard>
+              <SectionCard title="Subscription Dates"> ... </SectionCard>
+              <SectionCard title="Billing Profile"> ... </SectionCard>
+              <SectionCard title="Usage & Cost"> ... </SectionCard>
+            </div>
+            -----------------------------------------------------------
+            */}
 
-              {/* Subscription Dates */}
-              <SectionCard title="Subscription Dates">
-                <DetailRow label="Status" value={<AccessStateBadge state={sub?.effective_status} />} />
-                <DetailRow label="Started" value={formatDateTime(sub?.starts_at)} />
-                <DetailRow label="Trial Ends" value={formatDateTime(sub?.trial_ends_at)} highlight={sub?.is_trial_active} />
-                <DetailRow label="Trial Active" value={<BoolBadge value={sub?.is_trial_active} trueLabel="Yes" falseLabel="No" />} />
-                <DetailRow label="Trial Expired" value={<BoolBadge value={sub?.is_trial_expired} trueLabel="Yes" falseLabel="No" />} />
-                <DetailRow label="Period Start" value={formatDateTime(sub?.current_period_starts_at)} />
-                <DetailRow label="Period End" value={formatDateTime(sub?.current_period_ends_at)} highlight />
-                <DetailRow label="Expires At" value={sub?.expires_at ? formatDateTime(sub.expires_at) : <span className="text-gray-400 text-xs">No expiry</span>} />
-                <DetailRow label="Period Active" value={<BoolBadge value={sub?.is_current_period_active} trueLabel="Yes" falseLabel="No" />} />
-              </SectionCard>
-
-              {/* Billing Profile */}
-              <SectionCard title="Billing Profile">
-                <DetailRow label="Profile Name" value={billing?.name || '—'} />
-                <DetailRow label="Currency" value={<span className="font-bold text-gray-900">{billing?.currency || '—'}</span>} />
-                <DetailRow label="Billing Interval" value={<span className="capitalize">{billing?.billing_interval || '—'}</span>} />
-                <DetailRow label="Trial Days" value={billing?.trial_days ?? '—'} />
-                <DetailRow label="Grace Days" value={billing?.grace_days ?? '—'} />
-                <DetailRow label="Profile Status" value={<StatusBadge status={billing?.status} />} />
-              </SectionCard>
-
-              {/* Usage & Cost — simplified: total units + estimated cost only */}
-              <SectionCard title="Usage & Cost">
-                <div className="py-4 space-y-4">
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-1">Total Units Registered</p>
-                    <p className="text-3xl font-bold text-gray-900">{usage?.registered_units_total ?? 0}</p>
-                    <p className="text-xs text-gray-400 mt-1">across all properties</p>
+            {/* ===== Premium Subscription Dates Card ===== */}
+            <div className="relative overflow-hidden rounded-2xl ring-1 shadow-sm bg-white ring-gray-200/70">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500" />
+              <div className="px-6 py-5">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 flex items-center justify-center ring-1 ring-blue-100">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   </div>
-                  <div className="border-t border-gray-100 pt-4 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Estimated Total Cost</p>
-                    <p className="text-2xl font-bold text-blue-700">{formatCurrency(usage?.estimated_total_price_cents, currency)}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {usage?.property_breakdown_paginated
-                        ? 'see Property Cost Breakdown tab for details'
-                        : 'aggregate across workspace'}
-                    </p>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">Subscription Dates</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Workspace subscription timeline</p>
                   </div>
                 </div>
-              </SectionCard>
+
+                {/* Dates grid */}
+                <div className="flex flex-wrap gap-x-8 gap-y-4">
+                  {/* Started */}
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center mt-0.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Started</p>
+                      <p className="text-sm font-semibold text-gray-900 mt-0.5">{formatDateTime(sub?.starts_at)}</p>
+                    </div>
+                  </div>
+
+                  {/* Current Period */}
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center mt-0.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Current Period</p>
+                      <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                        {sub?.current_period_starts_at ? `${formatDate(sub?.current_period_starts_at)} – ${formatDate(sub?.current_period_ends_at)}` : '—'}
+                      </p>
+                      {sub?.is_current_period_active && (
+                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                          <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> Active
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Trial Ends */}
+                  {sub?.trial_ends_at && (
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center mt-0.5">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Trial Ends</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-0.5">{formatDateTime(sub?.trial_ends_at)}</p>
+                        {sub?.is_trial_active && (
+                          <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Trial active</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Trial Expired */}
+                  {sub?.is_trial_expired !== undefined && (
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center mt-0.5">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Trial Expired</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                          <BoolBadge value={sub?.is_trial_expired} trueLabel="Yes" falseLabel="No" />
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </>
         )}
