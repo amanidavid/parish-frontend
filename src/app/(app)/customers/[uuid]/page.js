@@ -7,12 +7,6 @@ import ContractService from '@/services/ContractService';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import useUiStore from '@/store/uiStore';
-import useCan from '@/hooks/useCan';
-
-const CUSTOMER_STATUS = {
-  active: { label: 'Active', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  inactive: { label: 'Inactive', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
-};
 
 const CONTRACT_STATUS = {
   draft: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600' },
@@ -36,9 +30,6 @@ export default function CustomerDetailPage() {
   const tab = 'contracts';
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  const canEdit = useCan('customers.update');
-  const canDelete = useCan('customers.delete');
 
   // Contracts tab state
   const [contracts, setContracts] = useState([]);
@@ -121,8 +112,6 @@ export default function CustomerDetailPage() {
     );
   }
 
-  const status = CUSTOMER_STATUS[customer?.status] || CUSTOMER_STATUS.inactive;
-
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const fmtAmount = (amount, currency) =>
     amount != null ? `${currency || ''} ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
@@ -144,53 +133,6 @@ export default function CustomerDetailPage() {
           </svg>
           Back to Customers
         </Link>
-      </div>
-
-      {/* Summary card */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-6 py-5 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <h1 className="text-lg font-bold text-gray-900">{cap(customer?.display_name)}</h1>
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${status.bg} ${status.text}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                {status.label}
-              </span>
-            </div>
-            <p className="text-sm text-gray-500">{cap(customer?.customer_type)}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {canEdit && <Link href={`/customers/${uuid}/edit`} className="btn-secondary text-sm">Edit</Link>}
-            {canDelete && <button onClick={() => setDeleteOpen(true)} className="btn-danger text-sm">Delete</button>}
-          </div>
-        </div>
-        <div className="border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100">
-          {[
-            { label: 'Email', value: customer?.email },
-            { label: 'Phone', value: customer?.phone },
-            { label: 'Member Since', value: customer?.created_at ? new Date(customer.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : null },
-            { label: 'Contracts', value: customer?.contracts_count ?? 0, large: true },
-          ].map(({ label, value, large }) => (
-            <div key={label} className="px-6 py-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-              <p className={`font-medium text-gray-800 ${large ? 'text-lg' : 'text-sm'} truncate`}>
-                {value || <span className="text-gray-300">—</span>}
-              </p>
-            </div>
-          ))}
-        </div>
-        {customer?.business_detail && (
-          <div className="border-t border-gray-100 px-6 py-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Business Details</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3 text-sm">
-              <div><span className="text-gray-400">Name:</span> <span className="text-gray-700 font-medium">{customer.business_detail.business_name || '—'}</span></div>
-              <div><span className="text-gray-400">Reg No:</span> <span className="text-gray-700">{customer.business_detail.registration_number || '—'}</span></div>
-              <div><span className="text-gray-400">Tax ID:</span> <span className="text-gray-700">{customer.business_detail.tax_identifier || '—'}</span></div>
-              <div><span className="text-gray-400">Contact:</span> <span className="text-gray-700">{customer.business_detail.contact_person_name || '—'}</span></div>
-              <div className="sm:col-span-2 lg:col-span-4"><span className="text-gray-400">Address:</span> <span className="text-gray-700">{customer.business_detail.address_line || '—'}</span></div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Contracts */}
