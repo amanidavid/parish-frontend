@@ -201,6 +201,7 @@ export default function ContractsTab({ propertyUuid }) {
       onRefresh: loadContracts,
     });
     loadContracts();
+    window.dispatchEvent(new CustomEvent('contract-saved', { detail: { propertyUuid } }));
   };
 
   const handleDelete = useCallback(async () => {

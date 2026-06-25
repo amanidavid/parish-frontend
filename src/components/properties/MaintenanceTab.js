@@ -666,10 +666,6 @@ export default function MaintenanceTab({ propertyUuid }) {
       <Modal open={modal.open} onClose={() => { if (!submitting) setModal({ open: false, mode: 'create', repair: null }); }}
         title={modal.mode === 'create' ? 'New Repair' : 'Edit Repair'} maxWidth="max-w-md">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <FormField label="Property">
-            <input type="text" value="Current Property" disabled
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed" />
-          </FormField>
           <FormField label="Floor">
             <select value={form.property_floor_uuid} onChange={(e) => updateField('property_floor_uuid', e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500">

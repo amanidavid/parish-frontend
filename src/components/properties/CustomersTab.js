@@ -168,6 +168,17 @@ export default function CustomersTab({ propertyUuid }) {
     fetchCustomers();
   }, [fetchCustomers]);
 
+  /* Refresh customers list when a contract is saved (may change customer status) */
+  useEffect(() => {
+    const handleContractSaved = (e) => {
+      if (e.detail?.propertyUuid === propertyUuid) {
+        fetchCustomers();
+      }
+    };
+    window.addEventListener('contract-saved', handleContractSaved);
+    return () => window.removeEventListener('contract-saved', handleContractSaved);
+  }, [propertyUuid, fetchCustomers]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(1);

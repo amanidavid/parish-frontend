@@ -125,7 +125,7 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
         .then((data) => {
           if (data?.success) setUnits(data.data || []);
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setUnitsLoading(false));
     },
     [propertyUuid]
@@ -137,7 +137,7 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
       .then((data) => {
         if (data?.success) setCustomers(data.data || []);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setCustomersLoading(false));
   }, []);
 
@@ -379,11 +379,10 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
                         key={c.uuid}
                         type="button"
                         onClick={() => selectCustomer(c)}
-                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-gray-50 last:border-0 ${
-                          form.customer_uuid === c.uuid
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        }`}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-gray-50 last:border-0 ${form.customer_uuid === c.uuid
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-700 hover:bg-gray-50'
+                          }`}
                       >
                         <span className="font-medium">{c.display_name}</span>
                         {c.customer_type && (
@@ -444,11 +443,10 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
                         key={u.uuid}
                         type="button"
                         onClick={() => selectUnit(u)}
-                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-gray-50 last:border-0 ${
-                          form.unit_uuid === u.uuid
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        }`}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-gray-50 last:border-0 ${form.unit_uuid === u.uuid
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-700 hover:bg-gray-50'
+                          }`}
                       >
                         <span className="font-medium">{u.unit_number}</span>
                         {u.property_floor && (
@@ -463,8 +461,8 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
             <FieldError message={errors?.unit_uuid?.[0]} />
           </div>
 
-          {/* Contract number - full width, auto-filled from API when unit selected */}
-          <div className="sm:col-span-2">
+          {/* Contract number | Status */}
+          <div>
             <label className="label">Contract Number</label>
             <div className="relative">
               <input
@@ -484,17 +482,22 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
             <FieldError message={errors?.contract_number?.[0]} />
           </div>
 
-          {isEdit && (
-            <div>
-              <label className="label">Status</label>
-              <select name="status" className="input text-sm" value={form.status} onChange={change}>
-                {Object.entries(CONTRACT_STATUS).map(([val, { label }]) => (
+          <div>
+            <label className="label">Status</label>
+            <select name="status" className="input text-sm" value={form.status} onChange={change}>
+              {isEdit
+                ? Object.entries(CONTRACT_STATUS).map(([val, { label }]) => (
                   <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
-              <FieldError message={errors?.status?.[0]} />
-            </div>
-          )}
+                ))
+                : (
+                  <>
+                    <option value="draft">Draft</option>
+                    <option value="active">Active</option>
+                  </>
+                )}
+            </select>
+            <FieldError message={errors?.status?.[0]} />
+          </div>
 
           {/* Start date */}
           <div>

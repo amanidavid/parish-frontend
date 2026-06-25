@@ -12,7 +12,6 @@ export default function CustomerForm({ onSubmit, loading, submitLabel, initial, 
     display_name: '',
     email: '',
     phone: '',
-    status: 'active',
     notes: '',
     business_name: '',
     registration_number: '',
@@ -30,7 +29,6 @@ export default function CustomerForm({ onSubmit, loading, submitLabel, initial, 
         display_name: initial.display_name || '',
         email: initial.email || '',
         phone: initial.phone || '',
-        status: initial.status || 'active',
         notes: initial.notes || '',
         business_name: initial.business_detail?.business_name || '',
         registration_number: initial.business_detail?.registration_number || '',
@@ -59,7 +57,6 @@ export default function CustomerForm({ onSubmit, loading, submitLabel, initial, 
       display_name: form.display_name.trim(),
       email: form.email.trim() || null,
       phone: form.phone.trim() || null,
-      status: form.status,
       notes: form.notes.trim() || null,
       ...(propertyUuid ? { property_uuid: propertyUuid } : {}),
     };
@@ -146,14 +143,6 @@ export default function CustomerForm({ onSubmit, loading, submitLabel, initial, 
           <FieldError message={errors?.phone?.[0]} />
         </div>
 
-        <div>
-          <label className="label">Status</label>
-          <select name="status" className="input text-sm" value={form.status} onChange={change}>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <FieldError message={errors?.status?.[0]} />
-        </div>
       </div>
 
       {/* Business Details */}

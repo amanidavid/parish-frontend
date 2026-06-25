@@ -248,12 +248,12 @@ export default function ReportsTab({ propertyUuid }) {
   }, [loadContractChart]);
 
   const maintenanceCards = summary ? [
-    { label: 'Jobs', value: summary.jobs_count ?? 0, color: 'text-blue-600', bg: 'bg-blue-50', icon: SUMMARY_ICONS.jobs },
+    { label: 'Repair', value: summary.jobs_count ?? 0, color: 'text-blue-600', bg: 'bg-blue-50', icon: SUMMARY_ICONS.jobs },
     { label: 'Expenses', value: summary.expenses_count ?? 0, color: 'text-purple-600', bg: 'bg-purple-50', icon: SUMMARY_ICONS.expenses },
-    { label: 'Total Amount', value: fmtCurrency(summary.total_amount), color: 'text-green-600', bg: 'bg-green-50', icon: SUMMARY_ICONS.amount },
-    { label: "Today's Amount", value: fmtCurrency(summary.today_amount), color: 'text-orange-600', bg: 'bg-orange-50', icon: SUMMARY_ICONS.today },
-    { label: 'This Month', value: fmtCurrency(summary.this_month_amount), color: 'text-teal-600', bg: 'bg-teal-50', icon: SUMMARY_ICONS.month },
-    { label: 'This Year', value: fmtCurrency(summary.this_year_amount), color: 'text-indigo-600', bg: 'bg-indigo-50', icon: SUMMARY_ICONS.year },
+    { label: 'Total Expenses Amount', value: fmtCurrency(summary.total_amount), color: 'text-green-600', bg: 'bg-green-50', icon: SUMMARY_ICONS.amount },
+    { label: "Today's Expenses Amount", value: fmtCurrency(summary.today_amount), color: 'text-orange-600', bg: 'bg-orange-50', icon: SUMMARY_ICONS.today },
+    { label: 'This Month Expenses Amount', value: fmtCurrency(summary.this_month_amount), color: 'text-teal-600', bg: 'bg-teal-50', icon: SUMMARY_ICONS.month },
+    { label: 'This Year Expenses Amount', value: fmtCurrency(summary.this_year_amount), color: 'text-indigo-600', bg: 'bg-indigo-50', icon: SUMMARY_ICONS.year },
   ] : [];
 
   const contractSummary = contractData?.summary ?? null;
@@ -287,10 +287,10 @@ export default function ReportsTab({ propertyUuid }) {
 
   return (
     <div className="space-y-6">
-      {/* Maintenance Summary */}
+      {/* Repair Summary */}
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Maintenance Summary</h3>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Reapir Summary</h3>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5">
               <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
