@@ -416,7 +416,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
         {/* Reports tab */}
         {mountedTabs.has('reports') && (
           <div className={tab !== 'reports' ? 'hidden' : ''}>
-            <ReportsTab propertyUuid={uuid} />
+            <ReportsTab propertyUuid={uuid} visible={tab === 'reports'} />
           </div>
         )}
 

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BarChart as RechartsBarChart,
   Bar,
@@ -110,7 +110,7 @@ const RANGE_OPTIONS = [
 ];
 
 /* ─── Main Component ────────────────────────────────────────────────────── */
-export default function ReportsTab({ propertyUuid }) {
+export default function ReportsTab({ propertyUuid, visible }) {
   const todayStr = new Date().toISOString().slice(0, 10);
   const [range, setRange] = useState('12_months');
   const [customStart, setCustomStart] = useState(todayStr);
@@ -169,6 +169,38 @@ export default function ReportsTab({ propertyUuid }) {
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
   useEffect(() => { loadChart(); }, [loadChart]);
+
+  /* Silent refresh (background refetch without loading spinners) */
+  const refreshSummary = useCallback(async () => {
+    try {
+      const payload = { propertyUuid, range };
+      if (range === 'custom') {
+        payload.startDate = customStart;
+        payload.endDate = customEnd;
+      }
+      const res = await ReportService.contractSummaryCards(payload);
+      if (res?.success) setSummary(res.data?.summary_cards ?? null);
+    } catch { /* silently fail */ }
+  }, [propertyUuid, range, customStart, customEnd]);
+
+  const refreshChart = useCallback(async () => {
+    try {
+      const res = await ReportService.contractMonthlyActiveAmountChart({ propertyUuid, window: 'last_12_months' });
+      if (res?.success) setChartData(res.data ?? null);
+    } catch { /* silently fail */ }
+  }, [propertyUuid]);
+
+  /* Refetch when tab becomes visible again after being hidden */
+  const hasBeenVisible = useRef(false);
+  useEffect(() => {
+    if (visible) {
+      if (hasBeenVisible.current) {
+        refreshSummary();
+        refreshChart();
+      }
+      hasBeenVisible.current = true;
+    }
+  }, [visible, refreshSummary, refreshChart]);
 
   const cards = summary ? [
     {
