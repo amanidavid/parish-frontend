@@ -53,8 +53,8 @@ function ContractsContent() {
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
+  /* const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState(''); */
   const [unitUuidFilter, setUnitUuidFilter] = useState(initialUnitUuid);
   const [page, setPage] = useState(1);
   const searchRef = useRef(null);
@@ -67,8 +67,8 @@ function ContractsContent() {
         search: appliedSearch || undefined,
         status: statusFilter || undefined,
         unitUuid: unitUuidFilter || undefined,
-        startDate: startDateFilter || undefined,
-        endDate: endDateFilter || undefined,
+        /* startDate: startDateFilter || undefined,
+        endDate: endDateFilter || undefined, */
         page,
         perPage: PER_PAGE,
       });
@@ -83,7 +83,7 @@ function ContractsContent() {
     } finally {
       setLoading(false);
     }
-  }, [appliedSearch, statusFilter, unitUuidFilter, startDateFilter, endDateFilter, page]);
+  }, [appliedSearch, statusFilter, unitUuidFilter, /* startDateFilter, endDateFilter, */ page]);
 
   useEffect(() => {
     fetchContracts();
@@ -99,8 +99,8 @@ function ContractsContent() {
     setSearchInput('');
     setAppliedSearch('');
     setStatusFilter('');
-    setStartDateFilter('');
-    setEndDateFilter('');
+    /* setStartDateFilter('');
+    setEndDateFilter(''); */
     setUnitUuidFilter('');
     setPage(1);
   };
@@ -186,7 +186,7 @@ function ContractsContent() {
             ))}
           </select>
 
-          <div className="flex items-center gap-1.5">
+          {/* <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
             <input type="date" value={startDateFilter} onChange={(e) => { setStartDateFilter(e.target.value); setPage(1); }}
               className="text-sm border border-gray-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500" />
@@ -195,9 +195,9 @@ function ContractsContent() {
             <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
             <input type="date" value={endDateFilter} onChange={(e) => { setEndDateFilter(e.target.value); setPage(1); }}
               className="text-sm border border-gray-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-          </div>
+          </div> */}
 
-          {(appliedSearch || statusFilter || unitUuidFilter || startDateFilter || endDateFilter) && (
+          {(appliedSearch || statusFilter || unitUuidFilter /* || startDateFilter || endDateFilter */) && (
             <button type="button" onClick={handleClear}
               className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors">
               Clear all
@@ -246,9 +246,9 @@ function ContractsContent() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <p className="text-sm text-gray-500 font-medium">
-                    {appliedSearch || statusFilter || unitUuidFilter || startDateFilter || endDateFilter ? 'No contracts match your filters.' : 'No contracts found.'}
+                    {appliedSearch || statusFilter || unitUuidFilter /* || startDateFilter || endDateFilter */ ? 'No contracts match your filters.' : 'No contracts found.'}
                   </p>
-                  {(appliedSearch || statusFilter || unitUuidFilter || startDateFilter || endDateFilter) && (
+                  {(appliedSearch || statusFilter || unitUuidFilter /* || startDateFilter || endDateFilter */) && (
                     <button onClick={handleClear} className="text-xs text-blue-600 hover:underline mt-2">Clear filters</button>
                   )}
                 </td>

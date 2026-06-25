@@ -119,7 +119,6 @@ export default function ReportsTab({ propertyUuid }) {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
 
-  const [chartYear, setChartYear] = useState(new Date().getFullYear());
   const [chartData, setChartData] = useState(null);
   const [chartLoading, setChartLoading] = useState(true);
   const [chartError, setChartError] = useState(null);
@@ -153,7 +152,7 @@ export default function ReportsTab({ propertyUuid }) {
     setChartLoading(true);
     setChartError(null);
     try {
-      const res = await ReportService.contractMonthlyActiveAmountChart({ propertyUuid, year: chartYear });
+      const res = await ReportService.contractMonthlyActiveAmountChart({ propertyUuid, window: 'last_12_months' });
       if (res?.success) {
         setChartData(res.data ?? null);
       } else {
@@ -166,7 +165,7 @@ export default function ReportsTab({ propertyUuid }) {
     } finally {
       setChartLoading(false);
     }
-  }, [propertyUuid, chartYear]);
+  }, [propertyUuid]);
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
   useEffect(() => { loadChart(); }, [loadChart]);
@@ -258,21 +257,6 @@ export default function ReportsTab({ propertyUuid }) {
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Revenue past 12 months</h3>
-          <div className="relative">
-            <select
-              value={chartYear}
-              onChange={(e) => setChartYear(Number(e.target.value))}
-              className="appearance-none text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg pl-3 pr-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
-            >
-              {Array.from({ length: 5 }).map((_, i) => {
-                const y = new Date().getFullYear() - i;
-                return <option key={y} value={y}>{y}</option>;
-              })}
-            </select>
-            <svg className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
         </div>
         {chartError && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">

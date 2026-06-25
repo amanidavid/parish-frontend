@@ -16,11 +16,11 @@ function buildNavGroups() {
           permission: 'staff.manage',
           icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
         },
-        {
-          href: '/subscription',
-          label: 'Subscription',
-          icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
-        },
+         {
+           href: '/subscription',
+           label: 'Subscription',
+           icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+         },
         {
           href: '/access-control',
           label: 'Access Control',
@@ -105,16 +105,18 @@ export default function Sidebar({ open }) {
 
   return (
     <aside
-      className={[
-        'flex flex-col bg-white border-r border-gray-200 h-full transition-all duration-300 shrink-0',
-        'fixed inset-y-0 left-0 z-40',
-        open ? 'translate-x-0 shadow-2xl' : '-translate-x-full',
-        'md:relative md:inset-auto md:z-auto md:translate-x-0 md:shadow-none',
-      ].join(' ')}
+      className={
+        [
+          'flex flex-col bg-white border-r border-gray-200 h-full transition-all duration-300 shrink-0',
+          'fixed inset-y-0 left-0 z-40',
+          open ? 'translate-x-0 shadow-2xl' : '-translate-x-full',
+          'md:relative md:inset-auto md:z-auto md:translate-x-0 md:shadow-none',
+        ].join(' ')
+      }
       style={{ width: open ? '240px' : '68px' }}
     >
       {/* Logo */}
-      <div className={`flex items-center border-b border-gray-100 h-16 shrink-0 ${open ? 'px-5 gap-3' : 'px-0 justify-center'
+      < div className={`flex items-center border-b border-gray-100 h-16 shrink-0 ${open ? 'px-5 gap-3' : 'px-0 justify-center'
         }`}>
         <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center shrink-0">
           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,39 +124,43 @@ export default function Sidebar({ open }) {
               d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
         </div>
-        {open && (
-          <span className="font-bold text-gray-900 text-[15px] whitespace-nowrap tracking-tight">
-            {process.env.NEXT_PUBLIC_APP_NAME || 'ZABA'}
-          </span>
-        )}
-      </div>
+        {
+          open && (
+            <span className="font-bold text-gray-900 text-[15px] whitespace-nowrap tracking-tight">
+              {process.env.NEXT_PUBLIC_APP_NAME || 'ZABA'}
+            </span>
+          )
+        }
+      </div >
 
       {/* Scrollable nav */}
-      <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-hide py-3">
-        {visibleGroups.map((section) => (
-          <div key={section.group} className="mb-4">
-            {open && (
-              <p className="px-5 mb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-                {section.group}
-              </p>
-            )}
-            {!open && section.group !== 'Main' && (
-              <div className="mx-4 border-t border-gray-100 mb-2" />
-            )}
-            {section.items.map((item) => (
-              <NavItem
-                key={item.href}
-                item={item}
-                active={isActive(item.href)}
-                open={open}
-              />
-            ))}
-          </div>
-        ))}
-      </nav>
+      < nav className="flex-1 min-h-0 overflow-y-auto scrollbar-hide py-3" >
+        {
+          visibleGroups.map((section) => (
+            <div key={section.group} className="mb-4">
+              {open && (
+                <p className="px-5 mb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+                  {section.group}
+                </p>
+              )}
+              {!open && section.group !== 'Main' && (
+                <div className="mx-4 border-t border-gray-100 mb-2" />
+              )}
+              {section.items.map((item) => (
+                <NavItem
+                  key={item.href}
+                  item={item}
+                  active={isActive(item.href)}
+                  open={open}
+                />
+              ))}
+            </div>
+          ))
+        }
+      </nav >
 
       {/* Bottom logout */}
-      <div className="shrink-0 border-t border-gray-100 p-2">
+      < div className="shrink-0 border-t border-gray-100 p-2" >
         <button
           onClick={handleLogout}
           title={!open ? 'Sign out' : undefined}
@@ -167,7 +173,7 @@ export default function Sidebar({ open }) {
           </svg>
           {open && <span className="text-sm font-medium">Sign out</span>}
         </button>
-      </div>
-    </aside>
+      </div >
+    </aside >
   );
 }

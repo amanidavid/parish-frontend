@@ -13,7 +13,7 @@ import {
   CustomersTab,
   MaintenanceTab,
   ReportsTab,
-  SubscriptionTab,
+  /* SubscriptionTab, */
 } from '@/modules/properties/propertiesModule';
 import useUiStore from '@/store/uiStore';
 import useCan from '@/hooks/useCan';
@@ -421,11 +421,11 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
         )}
 
         {/* Subscription tab */}
-        {mountedTabs.has('subscription') && (
+        {/* {mountedTabs.has('subscription') && (
           <div className={tab !== 'subscription' ? 'hidden' : ''}>
             <SubscriptionTab propertyUuid={uuid} />
           </div>
-        )}
+        )} */}
 
         <ConfirmModal
           open={deleteOpen}

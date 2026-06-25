@@ -55,7 +55,7 @@ const ReportService = {
       if (val !== undefined && val !== null && val !== '') qs.append(key, val);
     };
     append('property_uuid', params.propertyUuid);
-    append('year', params.year);
+    append('window', params.window || 'last_12_months');
     return apiFetch(`${BASE}/contracts/monthly-active-amount-chart?${qs}`);
   },
 };

@@ -122,8 +122,8 @@ export default function CustomersTab({ propertyUuid }) {
   const [viewContractSearchInput, setViewContractSearchInput] = useState('');
   const [viewAppliedContractSearch, setViewAppliedContractSearch] = useState('');
   const [viewContractStatusFilter, setViewContractStatusFilter] = useState('');
-  const [viewContractStartDate, setViewContractStartDate] = useState('');
-  const [viewContractEndDate, setViewContractEndDate] = useState('');
+  /* const [viewContractStartDate, setViewContractStartDate] = useState('');
+  const [viewContractEndDate, setViewContractEndDate] = useState(''); */
   const viewSearchTimer = useRef(null);
   const searchRef = useRef(null);
 
@@ -227,8 +227,8 @@ export default function CustomersTab({ propertyUuid }) {
       perPage: 15,
       search: viewAppliedContractSearch || undefined,
       status: viewContractStatusFilter || undefined,
-      startDate: viewContractStartDate || undefined,
-      endDate: viewContractEndDate || undefined,
+      /* startDate: viewContractStartDate || undefined,
+      endDate: viewContractEndDate || undefined, */
     })
       .then((data) => {
         if (data?.success) {
@@ -238,7 +238,7 @@ export default function CustomersTab({ propertyUuid }) {
       })
       .catch(() => { })
       .finally(() => setViewContractsLoading(false));
-  }, [viewCustomer, viewContractsPage, viewAppliedContractSearch, viewContractStatusFilter, viewContractStartDate, viewContractEndDate]);
+  }, [viewCustomer, viewContractsPage, viewAppliedContractSearch, viewContractStatusFilter, /* viewContractStartDate, viewContractEndDate */]);
 
   /* Debounced search for inline contract search */
   useEffect(() => {
@@ -265,7 +265,7 @@ export default function CustomersTab({ propertyUuid }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => { setViewCustomer(null); setViewContracts([]); setViewContractsPage(1); setViewContractSearchInput(''); setViewAppliedContractSearch(''); setViewContractStatusFilter(''); setViewContractStartDate(''); setViewContractEndDate(''); }}
+                onClick={() => { setViewCustomer(null); setViewContracts([]); setViewContractsPage(1); setViewContractSearchInput(''); setViewAppliedContractSearch(''); setViewContractStatusFilter(''); /* setViewContractStartDate(''); setViewContractEndDate(''); */ }}
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,7 +319,7 @@ export default function CustomersTab({ propertyUuid }) {
               <option value="terminated">Terminated</option>
             </select>
 
-            <div className="flex items-center gap-1.5">
+            {/* <div className="flex items-center gap-1.5">
               <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
               <input type="date" value={viewContractStartDate} onChange={(e) => { setViewContractStartDate(e.target.value); setViewContractsPage(1); }}
                 className="text-sm border border-gray-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500" />
@@ -328,11 +328,11 @@ export default function CustomersTab({ propertyUuid }) {
               <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
               <input type="date" value={viewContractEndDate} onChange={(e) => { setViewContractEndDate(e.target.value); setViewContractsPage(1); }}
                 className="text-sm border border-gray-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-            </div>
+            </div> */}
 
-            {(viewAppliedContractSearch || viewContractStatusFilter || viewContractStartDate || viewContractEndDate) && (
+            {(viewAppliedContractSearch || viewContractStatusFilter /* || viewContractStartDate || viewContractEndDate */) && (
               <button type="button"
-                onClick={() => { setViewContractSearchInput(''); setViewAppliedContractSearch(''); setViewContractStatusFilter(''); setViewContractStartDate(''); setViewContractEndDate(''); setViewContractsPage(1); }}
+                onClick={() => { setViewContractSearchInput(''); setViewAppliedContractSearch(''); setViewContractStatusFilter(''); /* setViewContractStartDate(''); setViewContractEndDate(''); */ setViewContractsPage(1); }}
                 className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors">
                 Clear all
               </button>
