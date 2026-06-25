@@ -215,9 +215,9 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
     property?.subscription_expired_on,
   ]);
 
-  const handleViewSubscription = useCallback(() => {
+  /* const handleViewSubscription = useCallback(() => {
     activateTab('subscription');
-  }, [activateTab]);
+  }, [activateTab]); */
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -289,7 +289,7 @@ export default function PropertyDetailClient({ uuid, initialProperty = null, ini
           </Link>
         </div>
 
-        <AccessBanner onViewSubscription={handleViewSubscription} />
+        <AccessBanner />
 
         {/* -- Pill-style Tab Bar (horizontal scroll on mobile) ----------------- */}
         <div className="relative">
