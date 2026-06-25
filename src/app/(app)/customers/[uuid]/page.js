@@ -39,6 +39,8 @@ export default function CustomerDetailPage() {
   const [contractSearchInput, setContractSearchInput] = useState('');
   const [appliedContractSearch, setAppliedContractSearch] = useState('');
   const [contractStatusFilter, setContractStatusFilter] = useState('');
+  const [contractStartDate, setContractStartDate] = useState('');
+  const [contractEndDate, setContractEndDate] = useState('');
 
   useEffect(() => {
     CustomerService.show(uuid)
@@ -59,6 +61,8 @@ export default function CustomerDetailPage() {
       customerUuid: uuid,
       search: appliedContractSearch || undefined,
       status: contractStatusFilter || undefined,
+      startDate: contractStartDate || undefined,
+      endDate: contractEndDate || undefined,
       page: contractsPage,
       perPage: 15,
     })
@@ -70,7 +74,7 @@ export default function CustomerDetailPage() {
       })
       .catch(() => { })
       .finally(() => setContractsLoading(false));
-  }, [uuid, appliedContractSearch, contractStatusFilter, contractsPage]);
+  }, [uuid, appliedContractSearch, contractStatusFilter, contractStartDate, contractEndDate, contractsPage]);
 
   useEffect(() => { loadContracts(); }, [loadContracts]);
 
@@ -175,9 +179,20 @@ export default function CustomerDetailPage() {
               ))}
             </select>
 
-            {(appliedContractSearch || contractStatusFilter) && (
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
+              <input type="date" value={contractStartDate} onChange={(e) => { setContractStartDate(e.target.value); setContractsPage(1); }}
+                className="text-sm border border-gray-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
+              <input type="date" value={contractEndDate} onChange={(e) => { setContractEndDate(e.target.value); setContractsPage(1); }}
+                className="text-sm border border-gray-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+            </div>
+
+            {(appliedContractSearch || contractStatusFilter || contractStartDate || contractEndDate) && (
               <button type="button"
-                onClick={() => { setContractSearchInput(''); setAppliedContractSearch(''); setContractStatusFilter(''); setContractsPage(1); }}
+                onClick={() => { setContractSearchInput(''); setAppliedContractSearch(''); setContractStatusFilter(''); setContractStartDate(''); setContractEndDate(''); setContractsPage(1); }}
                 className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors">
                 Clear all
               </button>
@@ -200,7 +215,7 @@ export default function CustomerDetailPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <p className="text-sm text-gray-500 font-medium">
-                {(appliedContractSearch || contractStatusFilter)
+                {(appliedContractSearch || contractStatusFilter || contractStartDate || contractEndDate)
                   ? 'No contracts match your search from the server.'
                   : 'No contracts found.'}
               </p>
@@ -209,8 +224,8 @@ export default function CustomerDetailPage() {
                   ? 'Try adjusting your search term or filters.'
                   : 'Contracts assigned to this customer will appear here.'}
               </p>
-              {(appliedContractSearch || contractStatusFilter) && (
-                <button onClick={() => { setContractSearchInput(''); setAppliedContractSearch(''); setContractStatusFilter(''); setContractsPage(1); }}
+              {(appliedContractSearch || contractStatusFilter || contractStartDate || contractEndDate) && (
+                <button onClick={() => { setContractSearchInput(''); setAppliedContractSearch(''); setContractStatusFilter(''); setContractStartDate(''); setContractEndDate(''); setContractsPage(1); }}
                   className="text-xs text-blue-600 hover:underline mt-2">Clear search</button>
               )}
             </div>

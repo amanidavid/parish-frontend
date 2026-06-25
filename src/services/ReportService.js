@@ -36,6 +36,28 @@ const ReportService = {
     const qs = buildChartQuery(filters);
     return apiFetch(`${BASE}/contracts/chart?${qs}`, { signal });
   },
+
+  async contractSummaryCards(params = {}) {
+    const qs = new URLSearchParams();
+    const append = (key, val) => {
+      if (val !== undefined && val !== null && val !== '') qs.append(key, val);
+    };
+    append('property_uuid', params.propertyUuid);
+    append('range', params.range);
+    append('start_date', params.startDate);
+    append('end_date', params.endDate);
+    return apiFetch(`${BASE}/contracts/summary-cards?${qs}`);
+  },
+
+  async contractMonthlyActiveAmountChart(params = {}) {
+    const qs = new URLSearchParams();
+    const append = (key, val) => {
+      if (val !== undefined && val !== null && val !== '') qs.append(key, val);
+    };
+    append('property_uuid', params.propertyUuid);
+    append('year', params.year);
+    return apiFetch(`${BASE}/contracts/monthly-active-amount-chart?${qs}`);
+  },
 };
 
 function buildQuery(filters) {

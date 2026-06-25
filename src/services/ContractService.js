@@ -10,6 +10,8 @@ const ContractService = {
     if (params.unitUuid) query.set('unit_uuid', params.unitUuid);
     if (params.status) query.set('status', params.status);
     if (params.search) query.set('search', params.search);
+    if (params.startDate) query.set('start_date', params.startDate);
+    if (params.endDate) query.set('end_date', params.endDate);
     if (params.page && params.page > 1) query.set('page', params.page);
     return apiFetch(`${BASE}?${query}`);
   },

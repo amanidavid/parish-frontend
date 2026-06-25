@@ -140,6 +140,8 @@ export default function ContractsTab({ propertyUuid }) {
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [contractModal, setContractModal] = useState(null);
   const [viewContract, setViewContract] = useState(null);
@@ -166,6 +168,8 @@ export default function ContractsTab({ propertyUuid }) {
       propertyUuid,
       search: appliedSearch || undefined,
       status: statusFilter || undefined,
+      startDate: startDateFilter || undefined,
+      endDate: endDateFilter || undefined,
       page,
     })
       .then((data) => {
@@ -178,7 +182,7 @@ export default function ContractsTab({ propertyUuid }) {
       })
       .catch(() => useUiStore.getState().showModal({ type: 'error', message: 'Network error. Please try again.' }))
       .finally(() => setLoading(false));
-  }, [propertyUuid, appliedSearch, statusFilter, page]);
+  }, [propertyUuid, appliedSearch, statusFilter, startDateFilter, endDateFilter, page]);
 
   useEffect(() => { loadContracts(); }, [loadContracts]);
 
@@ -191,6 +195,9 @@ export default function ContractsTab({ propertyUuid }) {
   const handleClear = () => {
     setSearchInput('');
     setAppliedSearch('');
+    setStatusFilter('');
+    setStartDateFilter('');
+    setEndDateFilter('');
     setPage(1);
   };
 
@@ -262,6 +269,17 @@ export default function ContractsTab({ propertyUuid }) {
               <option key={val} value={val}>{label}</option>
             ))}
           </select>
+
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
+            <input type="date" value={startDateFilter} onChange={(e) => { setStartDateFilter(e.target.value); setPage(1); }}
+              className="input w-auto text-sm py-1.5" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
+            <input type="date" value={endDateFilter} onChange={(e) => { setEndDateFilter(e.target.value); setPage(1); }}
+              className="input w-auto text-sm py-1.5" />
+          </div>
         </div>
         {canCreate && (
           <button
