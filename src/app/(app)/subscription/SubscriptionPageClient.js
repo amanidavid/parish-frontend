@@ -379,7 +379,7 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
         {/* Header row with total cost badge */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs text-gray-400 mt-0.5">Per-property billing — which pricing rule applies and estimated cost per property</p>
+            <p className="text-xs text-gray-400 mt-0.5">Per-property billing and estimated cost per property</p>
           </div>
           <div className="flex items-center gap-3">
             {meta && (
@@ -438,8 +438,6 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
                   <th>Property</th>
                   <th>Status</th>
                   <th className="text-center">Units</th>
-                  <th>Pricing Rule</th>
-                  <th>Rule Price</th>
                   <th>Effective From</th>
                   <th>Effective To</th>
                   <th className="text-right">Est. Cost</th>
@@ -450,7 +448,7 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
                   Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
                 ) : properties.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-16 text-sm text-gray-500">
+                    <td colSpan={7} className="text-center py-16 text-sm text-gray-500">
                       {appliedSearch || statusFilter ? 'No properties match your filters.' : 'No properties registered yet.'}
                     </td>
                   </tr>
@@ -468,14 +466,6 @@ export default function SubscriptionPageClient({ initialSummary = null, initialS
                         <span className="badge badge-blue" style={{ borderRadius: '0.375rem' }}>
                           {prop.registered_units}
                         </span>
-                      </td>
-                      <td>
-                        {rule
-                          ? <span className="badge badge-purple">{rule.range_start}–{rule.range_end ?? '∞'} units</span>
-                          : <span className="text-xs text-gray-400">No rule matched</span>}
-                      </td>
-                      <td className="font-medium text-gray-700">
-                        {rule ? formatCurrency(rule.price_cents, rule.currency) : <span className="text-gray-400">—</span>}
                       </td>
                       <td className="text-xs text-gray-600">
                         {rule?.effective_from ? formatDate(rule.effective_from) : <span className="text-gray-400">—</span>}
