@@ -13,6 +13,8 @@ const ReportService = {
     return apiFetch(`${BASE}/dashboard-overview?${qs}`, { signal });
   },
 
+  /* ─── Unused / Legacy ───────────────────────────────────────────────── */
+  /*
   async contractSummary(params = {}) {
     const { signal, ...filters } = params;
     const qs = buildQuery(filters);
@@ -36,6 +38,7 @@ const ReportService = {
     const qs = buildChartQuery(filters);
     return apiFetch(`${BASE}/contracts/chart?${qs}`, { signal });
   },
+  */
 
   async contractSummaryCards(params = {}) {
     const qs = new URLSearchParams();
@@ -58,8 +61,27 @@ const ReportService = {
     append('window', params.window || 'last_12_months');
     return apiFetch(`${BASE}/contracts/monthly-active-amount-chart?${qs}`);
   },
+
+  /* ─── Unused / Legacy ───────────────────────────────────────────────── */
+  /*
+  async contractChart(params = {}) {
+    const qs = new URLSearchParams();
+    const append = (key, val) => {
+      if (val !== undefined && val !== null && val !== '') qs.append(key, val);
+    };
+    append('property_uuid', params.propertyUuid);
+    append('range', params.range);
+    append('period', params.period || 'month');
+    append('metric', params.metric || 'revenue_collected');
+    append('start_date', params.startDate);
+    append('end_date', params.endDate);
+    return apiFetch(`${BASE}/contracts/chart?${qs}`);
+  },
+  */
 };
 
+/* ─── Unused helpers (legacy methods commented out above) ──────────────── */
+/*
 function buildQuery(filters) {
   const qs = new URLSearchParams();
   const append = (key, val) => {
@@ -97,5 +119,6 @@ function buildChartQuery(filters) {
   }
   return qs;
 }
+*/
 
 export default ReportService;

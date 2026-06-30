@@ -44,6 +44,8 @@ export default function UnitModal({ open, onClose, onSaved, onSave, initial = nu
     description: '',
     status: 'vacant',
     property_floor_uuid: '',
+    monthly_rent_amount: '',
+    rent_currency: 'TZS',
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -56,6 +58,8 @@ export default function UnitModal({ open, onClose, onSaved, onSave, initial = nu
       description: initial?.description || '',
       status: initial?.status || 'vacant',
       property_floor_uuid: initial?.property_floor?.uuid || resolvedFloorUuid || '',
+      monthly_rent_amount: initial?.monthly_rent_amount ?? '',
+      rent_currency: initial?.rent_currency || 'TZS',
     });
     setErrors({});
     setServerError(null);
@@ -72,6 +76,8 @@ export default function UnitModal({ open, onClose, onSaved, onSave, initial = nu
         description: form.description || null,
         status: form.status,
         ...(!isEdit && { property_floor_uuid: form.property_floor_uuid }),
+        monthly_rent_amount: form.monthly_rent_amount !== '' ? parseFloat(form.monthly_rent_amount) : null,
+        rent_currency: form.rent_currency.trim() || 'TZS',
       };
       const data = isEdit
         ? await UnitService.update(initial.uuid, payload)
@@ -153,6 +159,34 @@ export default function UnitModal({ open, onClose, onSaved, onSave, initial = nu
             required
           />
           <FieldError error={errors.unit_number?.[0]} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Monthly Rent Amount <span className="text-gray-400 font-normal text-xs"></span></label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="input"
+              placeholder="0.00"
+              value={form.monthly_rent_amount}
+              onChange={(e) => setForm((p) => ({ ...p, monthly_rent_amount: e.target.value }))}
+            />
+            <FieldError error={errors.monthly_rent_amount?.[0]} />
+          </div>
+          <div>
+            <label className="label">Currency</label>
+            <input
+              type="text"
+              maxLength={3}
+              className="input uppercase"
+              placeholder="TZS"
+              value={form.rent_currency}
+              onChange={(e) => setForm((p) => ({ ...p, rent_currency: e.target.value }))}
+            />
+            <FieldError error={errors.rent_currency?.[0]} />
+          </div>
         </div>
 
         <div>

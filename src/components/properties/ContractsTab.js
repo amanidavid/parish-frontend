@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ContractService from '@/services/ContractService';
 import ContractModal from '@/components/contracts/ContractModal';
+import PaymentModal from '@/components/contracts/PaymentModal';
+import TerminateModal from '@/components/contracts/TerminateModal';
 import Pagination from '@/components/ui/Pagination';
 import ActionMenu from '@/components/ui/ActionMenu';
 import Modal from '@/components/ui/Modal';
@@ -24,11 +26,25 @@ const CONTRACT_STATUS = {
   terminated: { label: 'Terminated', bg: 'bg-red-50', text: 'text-red-700', color: '#ef4444' },
 };
 
+const PAYMENT_STATUS = {
+  unpaid: { label: 'Unpaid', text: 'text-gray-500', border: 'border-gray-200', icon: 'M20 12H4' },
+  partial: { label: 'Partial', text: 'text-amber-600', border: 'border-amber-200', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  paid: { label: 'Paid', text: 'text-emerald-600', border: 'border-emerald-200', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+};
 
 function ContractStatusBadge({ status }) {
   const s = CONTRACT_STATUS[status] || CONTRACT_STATUS.draft;
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${s.bg} ${s.text}`}>
+      {s.label}
+    </span>
+  );
+}
+
+function PaymentStatusBadge({ status }) {
+  const s = PAYMENT_STATUS[status] || PAYMENT_STATUS.unpaid;
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${s.border} ${s.text} bg-white`}>
       {s.label}
     </span>
   );
@@ -66,6 +82,13 @@ function ContractViewModal({ open, onClose, contract }) {
     </div>
   );
 
+  const FinanceRow = ({ label, value, highlight }) => (
+    <div className="flex items-center justify-between py-2">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className={`text-sm font-semibold ${highlight || 'text-gray-900'}`}>{value}</span>
+    </div>
+  );
+
   if (!open || !contract) return null;
   return (
     <Modal open={open} onClose={onClose} title="Contract Details" maxWidth="max-w-lg">
@@ -74,8 +97,9 @@ function ContractViewModal({ open, onClose, contract }) {
         <div className={`relative overflow-hidden rounded-xl ring-1 shadow-sm p-5 ${s.bg} ring-gray-100`}>
           <div className="flex items-start justify-between">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <ContractStatusBadge status={c.status} />
+                {c.status !== 'draft' && <PaymentStatusBadge status={c.payment_status} />}
                 {c.duration_label && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/60 text-gray-700 text-[10px] font-semibold">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -86,7 +110,8 @@ function ContractViewModal({ open, onClose, contract }) {
               <p className="text-lg font-bold text-gray-900 mt-2">{c.contract_number || '—'}</p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-gray-900 tabular-nums">{fmtAmount(c.amount, c.currency)}</p>
+              <p className="text-2xl font-bold text-gray-900 tabular-nums">{fmtAmount(c.expected_total_amount, c.unit?.rent_currency || c.currency)}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Expected Total</p>
             </div>
           </div>
         </div>
@@ -103,13 +128,63 @@ function ContractViewModal({ open, onClose, contract }) {
             icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
             label="Unit"
             value={c.unit ? `${c.unit.unit_number}${c.unit.property_floor ? ` · ${c.unit.property_floor.name}` : ''}` : undefined}
+            sub={c.unit?.monthly_rent_amount != null ? `Monthly: ${c.unit.rent_currency || 'TZS'} ${Number(c.unit.monthly_rent_amount).toLocaleString()}` : undefined}
           />
           <InfoRow
             icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
             label="Period"
             value={`${fmtDate(c.start_date)} — ${c.end_date ? fmtDate(c.end_date) : 'Open ended'}`}
+            sub={c.contract_months ? `${c.contract_months} month${c.contract_months !== 1 ? 's' : ''}` : undefined}
           />
+          {c.termination_date && (
+            <InfoRow
+              icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
+              label="Termination"
+              value={fmtDate(c.termination_date)}
+              sub={c.termination_reason}
+            />
+          )}
         </div>
+
+        {/* Finance Summary */}
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Finance Summary</p>
+          <div className="divide-y divide-gray-50">
+            <FinanceRow label="Expected Total" value={fmtAmount(c.expected_total_amount, c.unit?.rent_currency || c.currency)} />
+            <FinanceRow label="Paid Total" value={fmtAmount(c.paid_amount_total, c.unit?.rent_currency || c.currency)} />
+            <FinanceRow label="Refunded Total" value={fmtAmount(c.refund_amount_total, c.unit?.rent_currency || c.currency)} />
+            <FinanceRow label="Net Collected" value={fmtAmount(c.net_collected_amount, c.unit?.rent_currency || c.currency)} highlight="text-emerald-600" />
+            {c.terminated_used_months != null && (
+              <div className="flex items-center justify-between py-2">
+                <span className="text-xs text-gray-500">Used / Unused Months</span>
+                <span className="text-sm font-semibold text-gray-900">{c.terminated_used_months} / {c.terminated_unused_months}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Transactions */}
+        {c.transactions && c.transactions.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Transactions</p>
+            <div className="space-y-2">
+              {c.transactions.map((tx) => (
+                <div key={tx.uuid} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${tx.type === 'refund' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      {tx.type === 'refund' ? 'Refund' : 'Payment'}
+                    </span>
+                    <span className="text-xs text-gray-500">{fmtDate(tx.transaction_date)}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">{fmtAmount(tx.amount, tx.currency)}</p>
+                    {tx.notes && <p className="text-[10px] text-gray-400 truncate max-w-[150px]">{tx.notes}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Notes */}
         {c.notes && (
@@ -145,6 +220,8 @@ export default function ContractsTab({ propertyUuid }) {
   const [loading, setLoading] = useState(true);
   const [contractModal, setContractModal] = useState(null);
   const [viewContract, setViewContract] = useState(null);
+  const [paymentModal, setPaymentModal] = useState(null);
+  const [terminateModal, setTerminateModal] = useState(null);
   const confirmModal = useConfirmModal();
   const searchRef = useRef(null);
 
@@ -152,6 +229,7 @@ export default function ContractsTab({ propertyUuid }) {
   const canView = useCan('customer_contracts.view');
   const canEdit = useCan('customer_contracts.update');
   const canDelete = useCan('customer_contracts.delete');
+  const canTerminate = useCan('customer_contracts.terminate');
 
   const access = usePropertyAccess();
   const workspaceBlocked = access?.workspace?.allowed === false;
@@ -410,9 +488,9 @@ export default function ContractsTab({ propertyUuid }) {
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contract No.</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Expected Total</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Period</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contract / Payment</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -429,18 +507,26 @@ export default function ContractsTab({ propertyUuid }) {
                         <span>{c.unit.unit_number}{c.unit.property_floor ? ` · ${c.unit.property_floor.name}` : ''}</span>
                       ) : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-700 tabular-nums">{fmtAmount(c.amount, c.currency)}</td>
+                    <td className="px-5 py-3.5 text-gray-700 tabular-nums">
+                      {fmtAmount(c.expected_total_amount, c.unit?.rent_currency || c.currency)}
+                      {c.outstanding_balance > 0 && (
+                        <p className="text-[10px] text-amber-600 mt-0.5">Due: {fmtAmount(c.outstanding_balance, c.unit?.rent_currency || c.currency)}</p>
+                      )}
+                    </td>
                     <td className="px-5 py-3.5 text-gray-500 text-xs whitespace-nowrap">
                       <div>{fmtDate(c.start_date)}{c.end_date ? ` → ${fmtDate(c.end_date)}` : ' → Open'}</div>
-                      {c.duration_label && (
+                      {c.contract_months && (
                         <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[10px] font-semibold">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          {c.duration_label}
+                          {c.contract_months} mo
                         </span>
                       )}
                     </td>
                     <td className="px-5 py-3.5">
-                      <ContractStatusBadge status={c.status} />
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <ContractStatusBadge status={c.status} />
+                        {c.status !== 'draft' && <PaymentStatusBadge status={c.payment_status} />}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -452,9 +538,21 @@ export default function ContractsTab({ propertyUuid }) {
                             View
                           </button>
                         )}
+                        <button
+                          onClick={() => c.status !== 'terminated' && c.payment_status !== 'paid' && setPaymentModal(c)}
+                          disabled={c.status === 'terminated' || c.payment_status === 'paid'}
+                          title={c.status === 'terminated' ? 'Contract is terminated' : c.payment_status === 'paid' ? 'Fully paid' : 'Record payment'}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${c.status === 'terminated' || c.payment_status === 'paid'
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                            }`}
+                        >
+                          Pay Due
+                        </button>
                         <ActionMenu
                           actions={[
                             ...(canEdit ? [{ label: 'Edit', onClick: () => setContractModal(c), disabled: opsBlocked }] : []),
+                            ...(canTerminate && c.status === 'active' ? [{ label: 'Terminate', onClick: () => setTerminateModal(c), disabled: opsBlocked, danger: true }] : []),
                             ...(canDelete ? [{ label: 'Delete', onClick: () => confirmModal.prompt(c), danger: true, disabled: opsBlocked }] : []),
                           ]}
                         />
@@ -482,6 +580,26 @@ export default function ContractsTab({ propertyUuid }) {
         propertyUuid={propertyUuid}
         initial={contractModal === 'new' ? null : contractModal}
         contracts={contracts}
+      />
+
+      <PaymentModal
+        open={!!paymentModal}
+        onClose={() => setPaymentModal(null)}
+        onSaved={(data, message) => {
+          useUiStore.getState().showModal({ type: 'success', message });
+          loadContracts();
+        }}
+        contract={paymentModal}
+      />
+
+      <TerminateModal
+        open={!!terminateModal}
+        onClose={() => setTerminateModal(null)}
+        onSaved={(data, message) => {
+          useUiStore.getState().showModal({ type: 'success', message });
+          loadContracts();
+        }}
+        contract={terminateModal}
       />
 
       <ConfirmModal

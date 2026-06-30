@@ -64,7 +64,7 @@ function RevenueChart({ data, loading }) {
 
   const chartData = data.map((d) => ({
     label: d.bucket_label || d.month?.toString() || '',
-    value: Number(d.active_contract_amount) || 0,
+    value: Number(d.revenue_collected ?? d.amount) || 0,
   }));
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -80,16 +80,27 @@ function RevenueChart({ data, loading }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <ResponsiveContainer width="100%" height={280}>
-        <RechartsBarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-          <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={{ stroke: '#e5e7eb' }} tickLine={false} />
-          <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v)} />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f9fafb' }} />
-          <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={36} fill="#0d9488" />
-        </RechartsBarChart>
-      </ResponsiveContainer>
+    <div className="bg-white rounded-xl border border-gray-200 p-5 overflow-x-auto">
+      <div className="min-w-[640px]">
+        <ResponsiveContainer width="100%" height={280}>
+          <RechartsBarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 30 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              axisLine={{ stroke: '#e5e7eb' }}
+              tickLine={false}
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              height={55}
+            />
+            <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v)} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f9fafb' }} />
+            <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={28} fill="#0d9488" />
+          </RechartsBarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -100,6 +111,7 @@ const ICONS = {
   revenue: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
   expenses: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
   remaining: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+  debts: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
 };
 
 const RANGE_OPTIONS = [
@@ -152,7 +164,10 @@ export default function ReportsTab({ propertyUuid, visible }) {
     setChartLoading(true);
     setChartError(null);
     try {
-      const res = await ReportService.contractMonthlyActiveAmountChart({ propertyUuid, window: 'last_12_months' });
+      const res = await ReportService.contractMonthlyActiveAmountChart({
+        propertyUuid,
+        window: 'last_12_months',
+      });
       if (res?.success) {
         setChartData(res.data ?? null);
       } else {
@@ -185,7 +200,10 @@ export default function ReportsTab({ propertyUuid, visible }) {
 
   const refreshChart = useCallback(async () => {
     try {
-      const res = await ReportService.contractMonthlyActiveAmountChart({ propertyUuid, window: 'last_12_months' });
+      const res = await ReportService.contractMonthlyActiveAmountChart({
+        propertyUuid,
+        window: 'last_12_months',
+      });
       if (res?.success) setChartData(res.data ?? null);
     } catch { /* silently fail */ }
   }, [propertyUuid]);
@@ -212,7 +230,7 @@ export default function ReportsTab({ propertyUuid, visible }) {
     },
     {
       label: 'Revenue Collected',
-      value: fmtCurrency(summary.active_contract_amount),
+      value: fmtCurrency(summary.revenue_collected),
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
       icon: ICONS.revenue,
@@ -225,11 +243,18 @@ export default function ReportsTab({ propertyUuid, visible }) {
       icon: ICONS.expenses,
     },
     {
-      label: 'Remaining Amount',
-      value: fmtCurrency(summary.net_active_contract_amount),
+      label: 'Remaining',
+      value: fmtCurrency(summary.remaining),
       color: 'text-indigo-600',
       bg: 'bg-indigo-50',
       icon: ICONS.remaining,
+    },
+    {
+      label: 'Remaining Debts',
+      value: fmtCurrency(summary.remaining_debts),
+      color: 'text-amber-600',
+      bg: 'bg-amber-50',
+      icon: ICONS.debts,
     },
   ] : [];
 
@@ -271,8 +296,8 @@ export default function ReportsTab({ propertyUuid, visible }) {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {(summaryLoading ? Array.from({ length: 4 }) : cards).map((card, i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {(summaryLoading ? Array.from({ length: 5 }) : cards).map((card, i) => (
           <SummaryCard
             key={i}
             label={summaryLoading ? '' : card.label}
@@ -288,7 +313,7 @@ export default function ReportsTab({ propertyUuid, visible }) {
       {/* Chart */}
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Revenue past 12 months</h3>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Revenue Past 12 Months</h3>
         </div>
         {chartError && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
@@ -298,7 +323,7 @@ export default function ReportsTab({ propertyUuid, visible }) {
             <p className="text-sm text-red-700">{chartError}</p>
           </div>
         )}
-        <RevenueChart data={chartData?.series ?? []} loading={chartLoading} />
+        <RevenueChart data={Array.isArray(chartData) ? chartData : (chartData?.series ?? [])} loading={chartLoading} />
       </div>
     </div>
   );

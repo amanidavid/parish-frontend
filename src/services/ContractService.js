@@ -40,6 +40,14 @@ const ContractService = {
     return apiFetch(`${BASE}/${uuid}`, { method: 'DELETE' });
   },
 
+  async recordPayment(uuid, data) {
+    return apiFetch(`${BASE}/${uuid}/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
   async nextNumber({ unitUuid, startDate }) {
     const query = new URLSearchParams();
     if (unitUuid) query.set('unit_uuid', unitUuid);

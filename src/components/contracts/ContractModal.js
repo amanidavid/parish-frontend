@@ -44,16 +44,19 @@ function getNextContractNumber(contracts = []) {
 
 export default function ContractModal({ open, onClose, onSaved, propertyUuid, initial, contracts = [] }) {
   const isEdit = !!initial?.uuid;
+  const hasPayments = isEdit && (initial?.paid_amount_total > 0 || initial?.transactions?.length > 0);
   const emptyForm = {
     customer_uuid: '',
     unit_uuid: '',
     contract_number: '',
     start_date: '',
-    end_date: '',
-    amount: '',
-    currency: 'TZS',
+    contract_months: '',
+    initial_amount_paid: '',
+    payment_date: '',
     status: 'draft',
     notes: '',
+    termination_date: '',
+    termination_reason: '',
   };
 
   const [form, setForm] = useState(emptyForm);
@@ -61,6 +64,8 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState(null);
   const [nextNumLoading, setNextNumLoading] = useState(false);
+  const [selectedUnitPrice, setSelectedUnitPrice] = useState(null);
+  const [selectedUnitCurrency, setSelectedUnitCurrency] = useState('TZS');
   const [customers, setCustomers] = useState([]);
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -89,11 +94,13 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
         unit_uuid: initial.unit?.uuid || '',
         contract_number: initial.contract_number || '',
         start_date: initial.start_date || '',
-        end_date: initial.end_date || '',
-        amount: initial.amount || '',
-        currency: initial.currency || 'TZS',
+        contract_months: initial.contract_months ?? '',
+        initial_amount_paid: '',
+        payment_date: '',
         status: initial.status || 'draft',
         notes: initial.notes || '',
+        termination_date: initial.termination_date || '',
+        termination_reason: initial.termination_reason || '',
       });
       setSelectedCustomerName(initial.customer?.display_name || '');
       setCustomerSearch(initial.customer?.display_name || '');
@@ -102,12 +109,16 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
         : '';
       setSelectedUnitName(unitLabel);
       setUnitSearch(unitLabel);
+      setSelectedUnitPrice(initial.unit?.monthly_rent_amount ?? null);
+      setSelectedUnitCurrency(initial.unit?.rent_currency || 'TZS');
     } else {
       setForm(emptyForm);
       setSelectedCustomerName('');
       setCustomerSearch('');
       setSelectedUnitName('');
       setUnitSearch('');
+      setSelectedUnitPrice(null);
+      setSelectedUnitCurrency('TZS');
     }
     setCustomers([]);
     setCustomerDropdownOpen(false);
@@ -133,13 +144,13 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
 
   const fetchCustomers = useCallback((query) => {
     setCustomersLoading(true);
-    CustomerService.list({ search: query || undefined, perPage: 20 })
+    CustomerService.list({ propertyUuid, search: query || undefined, perPage: 20 })
       .then((data) => {
         if (data?.success) setCustomers(data.data || []);
       })
       .catch(() => { })
       .finally(() => setCustomersLoading(false));
-  }, []);
+  }, [propertyUuid]);
 
   const handleCustomerInputChange = (e) => {
     const val = e.target.value;
@@ -197,6 +208,8 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
     setSelectedUnitName(label);
     setUnitSearch(label);
     setUnitDropdownOpen(false);
+    setSelectedUnitPrice(unit.monthly_rent_amount ?? null);
+    setSelectedUnitCurrency(unit.rent_currency || 'TZS');
     setErrors((p) => ({ ...p, unit_uuid: null }));
   };
 
@@ -204,6 +217,8 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
     setForm((p) => ({ ...p, unit_uuid: '', contract_number: '' }));
     setSelectedUnitName('');
     setUnitSearch('');
+    setSelectedUnitPrice(null);
+    setSelectedUnitCurrency('TZS');
     setUnits([]);
     setUnitDropdownOpen(false);
   };
@@ -291,17 +306,32 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
     setErrors({});
     setServerError(null);
     setSaving(true);
-    const payload = {
+
+    const basePayload = {
       customer_uuid: form.customer_uuid,
       unit_uuid: form.unit_uuid,
       contract_number: form.contract_number,
       start_date: form.start_date,
-      end_date: form.end_date,
-      amount: parseFloat(form.amount),
-      currency: form.currency,
+      contract_months: form.contract_months !== '' ? parseInt(form.contract_months, 10) : undefined,
       status: form.status,
       notes: form.notes || null,
     };
+
+    let payload;
+    if (isEdit) {
+      payload = { ...basePayload };
+      if (form.status === 'terminated') {
+        payload.termination_date = form.termination_date || undefined;
+        payload.termination_reason = form.termination_reason || undefined;
+      }
+    } else {
+      payload = {
+        ...basePayload,
+        initial_amount_paid: form.initial_amount_paid !== '' ? parseFloat(form.initial_amount_paid) : undefined,
+        payment_date: form.payment_date || undefined,
+      };
+    }
+
     try {
       const data = isEdit
         ? await ContractService.update(initial.uuid, payload)
@@ -415,6 +445,7 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
                 onChange={handleUnitInputChange}
                 onFocus={handleUnitFocus}
                 autoComplete="off"
+                disabled={hasPayments}
               />
               {form.unit_uuid && (
                 <button
@@ -451,6 +482,11 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
                         <span className="font-medium">{u.unit_number}</span>
                         {u.property_floor && (
                           <span className="ml-2 text-xs text-gray-400">{u.property_floor.name}</span>
+                        )}
+                        {u.monthly_rent_amount != null && (
+                          <span className="ml-auto text-xs text-emerald-600 font-medium">
+                            {u.rent_currency || 'TZS'} {Number(u.monthly_rent_amount).toLocaleString()}
+                          </span>
                         )}
                       </button>
                     ))
@@ -508,56 +544,120 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
               className="input text-sm appearance-none min-h-[2.5rem]"
               value={form.start_date}
               onChange={change}
+              disabled={hasPayments}
               required
             />
+            {hasPayments && <p className="text-[10px] text-amber-600 mt-0.5">Locked — payments exist</p>}
             <FieldError message={errors?.start_date?.[0]} />
           </div>
 
-          {/* End date */}
+          {/* Contract months */}
           <div>
-            <label className="label">End Date <span className="text-red-500">*</span></label>
+            <label className="label">Contract Months <span className="text-red-500">*</span></label>
             <input
-              name="end_date"
-              type="date"
-              className="input text-sm appearance-none min-h-[2.5rem]"
-              value={form.end_date}
-              onChange={change}
-              required
-            />
-            <FieldError message={errors?.end_date?.[0]} />
-          </div>
-
-          {/* Amount */}
-          <div>
-            <label className="label">Amount <span className="text-red-500">*</span></label>
-            <input
-              name="amount"
+              name="contract_months"
               type="number"
-              step="0.01"
-              min="0"
+              min="1"
               className="input text-sm"
-              placeholder="0.00"
-              value={form.amount}
+              placeholder="e.g. 6"
+              value={form.contract_months}
               onChange={change}
+              disabled={hasPayments}
               required
             />
-            <FieldError message={errors?.amount?.[0]} />
+            {hasPayments && <p className="text-[10px] text-amber-600 mt-0.5">Locked — payments exist</p>}
+            <FieldError message={errors?.contract_months?.[0]} />
           </div>
 
-          {/* Currency */}
-          <div>
-            <label className="label">Currency</label>
-            <input
-              name="currency"
-              type="text"
-              maxLength={3}
-              className="input text-sm uppercase"
-              placeholder="TZS"
-              value={form.currency}
-              onChange={change}
-            />
-            <FieldError message={errors?.currency?.[0]} />
+          {/* Unit price display & computed total */}
+          <div className="sm:col-span-2">
+            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="flex-1">
+                <p className="text-xs text-gray-500">Unit Monthly Price</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {selectedUnitPrice != null
+                    ? `${selectedUnitCurrency} ${Number(selectedUnitPrice).toLocaleString()}`
+                    : '—'}
+                </p>
+              </div>
+              <div className="text-gray-300">×</div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-500">Months</p>
+                <p className="text-sm font-semibold text-gray-900">{form.contract_months || '—'}</p>
+              </div>
+              <div className="text-gray-300">=</div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-500">Expected Total</p>
+                <p className="text-sm font-semibold text-emerald-700">
+                  {selectedUnitPrice != null && form.contract_months
+                    ? `${selectedUnitCurrency} ${(selectedUnitPrice * Number(form.contract_months)).toLocaleString()}`
+                    : '—'}
+                </p>
+              </div>
+            </div>
           </div>
+
+          {/* Initial amount paid (create only) */}
+          {!isEdit && (
+            <>
+              <div>
+                <label className="label">Initial Amount Paid <span className="text-gray-400 font-normal text-xs">(optional)</span></label>
+                <input
+                  name="initial_amount_paid"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input text-sm"
+                  placeholder="0.00"
+                  value={form.initial_amount_paid}
+                  onChange={change}
+                />
+                <FieldError message={errors?.initial_amount_paid?.[0]} />
+              </div>
+              <div>
+                <label className="label">Payment Date <span className="text-gray-400 font-normal text-xs">(optional)</span></label>
+                <input
+                  name="payment_date"
+                  type="date"
+                  className="input text-sm appearance-none min-h-[2.5rem]"
+                  value={form.payment_date}
+                  onChange={change}
+                />
+                <FieldError message={errors?.payment_date?.[0]} />
+              </div>
+            </>
+          )}
+
+          {/* Termination fields (edit only, when status=terminated) */}
+          {isEdit && form.status === 'terminated' && (
+            <>
+              <div>
+                <label className="label">Termination Date <span className="text-red-500">*</span></label>
+                <input
+                  name="termination_date"
+                  type="date"
+                  className="input text-sm appearance-none min-h-[2.5rem]"
+                  value={form.termination_date}
+                  onChange={change}
+                  required={form.status === 'terminated'}
+                />
+                <FieldError message={errors?.termination_date?.[0]} />
+              </div>
+              <div>
+                <label className="label">Termination Reason <span className="text-red-500">*</span></label>
+                <input
+                  name="termination_reason"
+                  type="text"
+                  className="input text-sm"
+                  placeholder="Reason for termination..."
+                  value={form.termination_reason}
+                  onChange={change}
+                  required={form.status === 'terminated'}
+                />
+                <FieldError message={errors?.termination_reason?.[0]} />
+              </div>
+            </>
+          )}
 
           {/* Notes */}
           <div className="sm:col-span-2">

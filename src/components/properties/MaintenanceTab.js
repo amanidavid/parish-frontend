@@ -360,16 +360,16 @@ export default function MaintenanceTab({ propertyUuid }) {
 
   useEffect(() => {
     if (!propertyUuid) { setFloors([]); return; }
-    FloorService.listAll(propertyUuid).then((res) => {
-      setFloors(res?.data?.data ?? res?.data ?? []);
-    });
+    FloorService.listAll(propertyUuid)
+      .then((res) => setFloors(res?.data?.data ?? res?.data ?? []))
+      .catch(() => setFloors([]));
   }, [propertyUuid]);
 
   useEffect(() => {
     if (!form.property_floor_uuid) { setUnits([]); return; }
-    UnitService.listByFloor(form.property_floor_uuid, { perPage: 100 }).then((res) => {
-      setUnits(res?.data?.data ?? res?.data ?? []);
-    });
+    UnitService.listByFloor(form.property_floor_uuid, { perPage: 100 })
+      .then((res) => setUnits(res?.data?.data ?? res?.data ?? []))
+      .catch(() => setUnits([]));
   }, [form.property_floor_uuid]);
 
   const openCreate = useCallback(() => {
