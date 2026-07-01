@@ -354,7 +354,6 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
       payload = {
         ...basePayload,
         initial_amount_paid: parseFloat(form.initial_amount_paid),
-        payment_date: form.payment_date || undefined,
       };
     }
 

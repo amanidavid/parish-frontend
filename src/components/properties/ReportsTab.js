@@ -115,9 +115,9 @@ const ICONS = {
 };
 
 const RANGE_OPTIONS = [
-  { value: '3_months', label: '3 Months' },
-  { value: '6_months', label: '6 Months' },
-  { value: '12_months', label: '12 Months' },
+  { value: '3_months', label: 'Last 3 Months' },
+  { value: '6_months', label: 'Last 6 Months' },
+  { value: '12_months', label: 'Last 12 Months' },
   { value: 'custom', label: 'Custom' },
 ];
 
