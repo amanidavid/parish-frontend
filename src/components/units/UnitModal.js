@@ -180,10 +180,10 @@ export default function UnitModal({ open, onClose, onSaved, onSave, initial = nu
             <input
               type="text"
               maxLength={3}
-              className="input uppercase"
+              className="input uppercase bg-gray-50 cursor-not-allowed"
               placeholder="TZS"
               value={form.rent_currency}
-              onChange={(e) => setForm((p) => ({ ...p, rent_currency: e.target.value }))}
+              readOnly
             />
             <FieldError error={errors.rent_currency?.[0]} />
           </div>

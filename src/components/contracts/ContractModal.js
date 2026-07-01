@@ -27,6 +27,20 @@ function FieldError({ message }) {
   return <p className="mt-1 text-xs text-red-600">{message}</p>;
 }
 
+function computeEndDate(startDate, months) {
+  if (!startDate || !months) return null;
+  const d = new Date(startDate);
+  d.setMonth(d.getMonth() + parseInt(months, 10));
+  return d.toISOString().split('T')[0];
+}
+
+function computeMonthsBetween(start, end) {
+  if (!start || !end) return '';
+  const s = new Date(start);
+  const e = new Date(end);
+  return String((e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()));
+}
+
 function getNextContractNumber(contracts = []) {
   if (!contracts.length) return 'C-001';
   const nums = contracts
@@ -45,14 +59,16 @@ function getNextContractNumber(contracts = []) {
 export default function ContractModal({ open, onClose, onSaved, propertyUuid, initial, contracts = [] }) {
   const isEdit = !!initial?.uuid;
   const hasPayments = isEdit && (initial?.paid_amount_total > 0 || initial?.transactions?.length > 0);
+  const isLocked = hasPayments && initial?.status !== 'draft';
+  const today = new Date().toISOString().split('T')[0];
   const emptyForm = {
     customer_uuid: '',
     unit_uuid: '',
     contract_number: '',
-    start_date: '',
-    contract_months: '',
+    start_date: today,
+    contract_months: '1',
     initial_amount_paid: '',
-    payment_date: '',
+    payment_date: today,
     status: 'draft',
     notes: '',
     termination_date: '',
@@ -94,7 +110,7 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
         unit_uuid: initial.unit?.uuid || '',
         contract_number: initial.contract_number || '',
         start_date: initial.start_date || '',
-        contract_months: initial.contract_months ?? '',
+        contract_months: initial.contract_months ?? computeMonthsBetween(initial.start_date, initial.end_date) ?? '',
         initial_amount_paid: '',
         payment_date: '',
         status: initial.status || 'draft',
@@ -307,6 +323,16 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
     setServerError(null);
     setSaving(true);
 
+    /* Frontend validation for create mode */
+    if (!isEdit) {
+      const paid = parseFloat(form.initial_amount_paid);
+      if (form.initial_amount_paid === '' || isNaN(paid) || paid <= 0) {
+        setErrors({ initial_amount_paid: ['Paid amount is required and must be greater than 0'] });
+        setSaving(false);
+        return;
+      }
+    }
+
     const basePayload = {
       customer_uuid: form.customer_uuid,
       unit_uuid: form.unit_uuid,
@@ -327,7 +353,7 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
     } else {
       payload = {
         ...basePayload,
-        initial_amount_paid: form.initial_amount_paid !== '' ? parseFloat(form.initial_amount_paid) : undefined,
+        initial_amount_paid: parseFloat(form.initial_amount_paid),
         payment_date: form.payment_date || undefined,
       };
     }
@@ -445,7 +471,7 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
                 onChange={handleUnitInputChange}
                 onFocus={handleUnitFocus}
                 autoComplete="off"
-                disabled={hasPayments}
+                disabled={isLocked}
               />
               {form.unit_uuid && (
                 <button
@@ -469,27 +495,46 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
                       {unitSearch.trim() ? 'No units found.' : 'Type to search units...'}
                     </div>
                   ) : (
-                    units.map((u) => (
-                      <button
-                        key={u.uuid}
-                        type="button"
-                        onClick={() => selectUnit(u)}
-                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-gray-50 last:border-0 ${form.unit_uuid === u.uuid
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                      >
-                        <span className="font-medium">{u.unit_number}</span>
-                        {u.property_floor && (
-                          <span className="ml-2 text-xs text-gray-400">{u.property_floor.name}</span>
-                        )}
-                        {u.monthly_rent_amount != null && (
-                          <span className="ml-auto text-xs text-emerald-600 font-medium">
-                            {u.rent_currency || 'TZS'} {Number(u.monthly_rent_amount).toLocaleString()}
+                    units.map((u) => {
+                      const isDisabled = u.status === 'occupied' || u.status === 'maintenance';
+                      const statusBadge = {
+                        occupied: { label: 'Occupied', dot: 'bg-green-500', text: 'text-green-700', bg: 'bg-green-50' },
+                        vacant: { label: 'Vacant', dot: 'bg-gray-400', text: 'text-gray-600', bg: 'bg-gray-50' },
+                        maintenance: { label: 'Maintenance', dot: 'bg-amber-400', text: 'text-amber-700', bg: 'bg-amber-50' },
+                      }[u.status] || { label: u.status, dot: 'bg-gray-400', text: 'text-gray-600', bg: 'bg-gray-50' };
+                      return (
+                        <button
+                          key={u.uuid}
+                          type="button"
+                          onClick={() => !isDisabled && selectUnit(u)}
+                          disabled={isDisabled}
+                          className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-gray-50 last:border-0 flex items-center gap-2 ${isDisabled
+                            ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                            : form.unit_uuid === u.uuid
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{u.unit_number}</span>
+                              {u.property_floor && (
+                                <span className="text-xs text-gray-400">{u.property_floor.name}</span>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${statusBadge.bg} ${statusBadge.text}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
+                            {statusBadge.label}
                           </span>
-                        )}
-                      </button>
-                    ))
+                          {u.monthly_rent_amount != null && (
+                            <span className="text-xs text-emerald-600 font-medium shrink-0">
+                              {u.rent_currency || 'TZS'} {Number(u.monthly_rent_amount).toLocaleString()}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               )}
@@ -544,10 +589,10 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
               className="input text-sm appearance-none min-h-[2.5rem]"
               value={form.start_date}
               onChange={change}
-              disabled={hasPayments}
+              disabled={isLocked}
               required
             />
-            {hasPayments && <p className="text-[10px] text-amber-600 mt-0.5">Locked — payments exist</p>}
+            {isLocked && <p className="text-[10px] text-amber-600 mt-0.5">Locked — payments exist</p>}
             <FieldError message={errors?.start_date?.[0]} />
           </div>
 
@@ -562,10 +607,10 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
               placeholder="e.g. 6"
               value={form.contract_months}
               onChange={change}
-              disabled={hasPayments}
+              disabled={isLocked}
               required
             />
-            {hasPayments && <p className="text-[10px] text-amber-600 mt-0.5">Locked — payments exist</p>}
+            {isLocked && <p className="text-[10px] text-amber-600 mt-0.5">Locked — payments exist</p>}
             <FieldError message={errors?.contract_months?.[0]} />
           </div>
 
@@ -594,36 +639,33 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
                     : '—'}
                 </p>
               </div>
+              <div className="text-gray-300">→</div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-500">End Date</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {computeEndDate(form.start_date, form.contract_months) || '—'}
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Initial amount paid (create only) */}
           {!isEdit && (
             <>
-              <div>
-                <label className="label">Initial Amount Paid <span className="text-gray-400 font-normal text-xs">(optional)</span></label>
+              <div className="sm:col-span-2">
+                <label className="label">Paid Amount <span className="text-red-500">*</span></label>
                 <input
                   name="initial_amount_paid"
                   type="number"
                   step="0.01"
-                  min="0"
+                  min="0.01"
                   className="input text-sm"
                   placeholder="0.00"
                   value={form.initial_amount_paid}
                   onChange={change}
+                  required
                 />
                 <FieldError message={errors?.initial_amount_paid?.[0]} />
-              </div>
-              <div>
-                <label className="label">Payment Date <span className="text-gray-400 font-normal text-xs">(optional)</span></label>
-                <input
-                  name="payment_date"
-                  type="date"
-                  className="input text-sm appearance-none min-h-[2.5rem]"
-                  value={form.payment_date}
-                  onChange={change}
-                />
-                <FieldError message={errors?.payment_date?.[0]} />
               </div>
             </>
           )}

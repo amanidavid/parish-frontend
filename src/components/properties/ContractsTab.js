@@ -488,6 +488,7 @@ export default function ContractsTab({ propertyUuid }) {
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contract No.</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly Rent</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Expected Total</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Period</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contract / Payment</th>
@@ -506,6 +507,11 @@ export default function ContractsTab({ propertyUuid }) {
                       {c.unit ? (
                         <span>{c.unit.unit_number}{c.unit.property_floor ? ` · ${c.unit.property_floor.name}` : ''}</span>
                       ) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-700 tabular-nums text-xs">
+                      {c.unit?.monthly_rent_amount != null
+                        ? `${c.unit.rent_currency || 'TZS'} ${Number(c.unit.monthly_rent_amount).toLocaleString()}`
+                        : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-5 py-3.5 text-gray-700 tabular-nums">
                       {fmtAmount(c.expected_total_amount, c.unit?.rent_currency || c.currency)}

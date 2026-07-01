@@ -616,6 +616,7 @@ export default function FloorsWorkspace({ propertyUuid }) {
                           <tr className="bg-gray-50 border-b border-gray-100">
                             <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit #</th>
                             <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly Rent</th>
                             <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
@@ -630,6 +631,11 @@ export default function FloorsWorkspace({ propertyUuid }) {
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${u.status === 'occupied' ? 'bg-green-50 text-green-700' : u.status === 'vacant' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
                                   {u.status ? capitalize(u.status) : '—'}
                                 </span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-700 tabular-nums text-xs">
+                                {u.monthly_rent_amount != null
+                                  ? `${u.rent_currency || 'TZS'} ${Number(u.monthly_rent_amount).toLocaleString()}`
+                                  : <span className="text-gray-300">—</span>}
                               </td>
                               <td className="px-4 py-3 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
