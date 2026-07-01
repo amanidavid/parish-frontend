@@ -29,16 +29,23 @@ function FieldError({ message }) {
 
 function computeEndDate(startDate, months) {
   if (!startDate || !months) return null;
-  const d = new Date(startDate);
-  d.setMonth(d.getMonth() + parseInt(months, 10));
+  const [y, m, day] = startDate.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1, day));
+  d.setUTCMonth(d.getUTCMonth() + parseInt(months, 10));
+  // addMonthsNoOverflow: if day changed, cap to last day of target month
+  if (d.getUTCDate() !== day) d.setUTCDate(0);
+  d.setUTCDate(d.getUTCDate() - 1); // subDay()
   return d.toISOString().split('T')[0];
 }
 
 function computeMonthsBetween(start, end) {
   if (!start || !end) return '';
-  const s = new Date(start);
-  const e = new Date(end);
-  return String((e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()));
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const [ey, em, ed] = end.split('-').map(Number);
+  const s = new Date(Date.UTC(sy, sm - 1, sd));
+  const e = new Date(Date.UTC(ey, em - 1, ed));
+  e.setUTCDate(e.getUTCDate() + 1); // undo subDay to align month boundaries
+  return String((e.getUTCFullYear() - s.getUTCFullYear()) * 12 + (e.getUTCMonth() - s.getUTCMonth()));
 }
 
 function getNextContractNumber(contracts = []) {
@@ -143,6 +150,15 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
     setErrors({});
     setServerError(null);
   }, [open, isEdit, initial]);
+
+  /* Auto-populate Paid Amount with expected total (create mode only) */
+  useEffect(() => {
+    if (isEdit) return;
+    if (selectedUnitPrice != null && form.contract_months) {
+      const total = selectedUnitPrice * Number(form.contract_months);
+      setForm((p) => ({ ...p, initial_amount_paid: String(total) }));
+    }
+  }, [isEdit, selectedUnitPrice, form.contract_months]);
 
   /* Unit search: server-side */
   const fetchUnits = useCallback(
@@ -642,7 +658,9 @@ export default function ContractModal({ open, onClose, onSaved, propertyUuid, in
               <div className="flex-1">
                 <p className="text-xs text-gray-500">End Date</p>
                 <p className="text-sm font-semibold text-gray-900">
-                  {computeEndDate(form.start_date, form.contract_months) || '—'}
+                  {isEdit
+                    ? (initial?.end_date || '—')
+                    : (computeEndDate(form.start_date, form.contract_months) || '—')}
                 </p>
               </div>
             </div>
